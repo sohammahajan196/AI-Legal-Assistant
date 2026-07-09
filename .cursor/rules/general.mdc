@@ -1,0 +1,24 @@
+---
+description: Core project standards for the AI Legal Assistant (explainability, grounding, disclaimers)
+alwaysApply: true
+---
+
+# AI Legal Assistant — Core Standards
+
+This is an explainability-first RAG system for Indian law. See `PRD.md`, `PLAN.md`, and `TASKS.md` at the repo root for full product/architecture context before making non-trivial changes.
+
+## Non-negotiable principles
+
+- **No unverifiable claims.** Every answer must be grounded in retrieved source text. Never let the LLM generate legal content that isn't traceable to an ingested document/section.
+- **Citations are sacred.** Never fabricate a `SourceCitation`. If a claim has no backing chunk, it doesn't ship.
+- **Confidence is computed, not self-reported.** Never wire the LLM's own confidence claim directly into `confidence_score` — it must derive from retrieval similarity and/or groundedness signals (see `backend/app/rag/confidence.py`).
+- **Refuse rather than guess.** Low confidence or no relevant retrieval → return the refusal template ("insufficient information, consult a licensed lawyer"), don't force an answer.
+- **Disclaimer everywhere.** The "not a substitute for licensed legal counsel" disclaimer must appear in the system prompt AND the UI. Never remove it to make output "cleaner".
+- **Not a document generator.** This system explains law; it does not draft contracts, notices, or binding legal documents.
+
+## Working conventions
+
+- When implementing a task from `TASKS.md`, cross-reference the matching `PLAN.md` section number for the intended design.
+- Prefer the smallest diff that satisfies a task's acceptance criteria; don't silently restructure the architecture in `PLAN.md` — flag proposed deviations to the user first.
+- Never commit real API keys, tokens, or `.env` files — only `.env.example` with placeholder values.
+- Keep the six legal domains (`criminal`, `civil`, `family`, `labour`, `consumer`, `property`) plus `other` consistent across backend schemas, frontend selectors, and docs — don't introduce a new domain name in only one layer.

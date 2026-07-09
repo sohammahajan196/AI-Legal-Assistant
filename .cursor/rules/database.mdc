@@ -1,0 +1,15 @@
+---
+description: Conventions for SQLite session/log storage, FAISS/BM25 indices, and Redis cache
+globs: backend/app/rag/**/*.py,backend/app/services/**/*.py,backend/scripts/**/*.py
+alwaysApply: false
+---
+
+# Data Layer Conventions (SQLite + FAISS + BM25 + Redis)
+
+- **SQLite** (`sessions`, `messages`, `query_logs`) is for session/audit state only — never store vector embeddings or full document text there.
+- **FAISS** is the semantic store; **BM25** is the keyword store. Both are built from the same processed chunk corpus (`data/processed/<domain>.jsonl`) — never let them drift out of sync; rebuild both together via `scripts/build_index.py`.
+- Every chunk/document indexed must carry full citation metadata (`domain`, `act_name`, `section_number`, `source_citation`) — never index text without it.
+- Domain filtering happens via a metadata filter on the FAISS/BM25 query, not by maintaining separate physical indices per domain.
+- **Redis** is for caching and rate-limiting only — never treat it as a source of truth; the system must degrade gracefully (log a warning, skip caching) if Redis is unreachable rather than crashing the request.
+- Raw legal source texts (`data/raw/`) are immutable inputs — never hand-edit them; fix issues in the parser (`app/rag/chunking.py`) instead.
+- Query logging must respect `consent_to_log`: store full query text only if consent was given, otherwise store a hash only.

@@ -1,0 +1,22 @@
+---
+description: Backend conventions for FastAPI, LangChain, and Gemini structured-output integration
+globs: backend/**/*.py
+alwaysApply: false
+---
+
+# Backend Conventions (FastAPI + LangChain + Gemini)
+
+- **Async-first**: all I/O-bound work (LLM calls, Redis, FAISS/BM25 lookups) must be `async def` and non-blocking; wrap sync libraries (FAISS, BM25, cross-encoder) in `asyncio.to_thread`.
+- Config comes from `app/core/config.py` (`pydantic-settings`) only — never read `os.environ` directly in feature code.
+- LLM structured output must use `.with_structured_output(Schema, method="json_schema")` against Gemini — never prompt the model to "return JSON" as free text.
+- Keep the LLM-facing schema (`LLMStructuredAnswer`) and the API-facing schema (`LegalAnswerResponse`) separate in `app/schemas/` — don't collapse them into one model.
+- Retry-with-repair: on `ValidationError`, re-invoke with the error message appended to the prompt, bounded to 2 retries — never silently swallow validation failures or retry unboundedly.
+- Every route besides `/health` requires the bearer-token auth dependency (`app/core/security.py`).
+- New RAG pipeline stages go in `app/rag/`; new HTTP concerns go in `app/api/routes/`; never mix prompt/retrieval logic directly into route handlers — call into `app/services/`.
+
+Example:
+
+```python
+structured_llm = llm.with_structured_output(LLMStructuredAnswer, method="json_schema")
+result = await structured_llm.ainvoke(prompt)
+```

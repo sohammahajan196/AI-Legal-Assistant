@@ -1,0 +1,15 @@
+---
+description: Frontend conventions for the Next.js 15 App Router chat UI
+globs: frontend/**/*.ts,frontend/**/*.tsx
+alwaysApply: false
+---
+
+# Frontend Conventions (Next.js 15, App Router)
+
+- **Never** send the backend bearer token to the browser. It only lives in server-side env vars read inside `app/api/**/route.ts` proxy routes.
+- All backend calls from client components go through a Next.js API route proxy — never `fetch()` the FastAPI backend URL directly from a client component.
+- Every answer rendered in the chat UI must display its `citations` and `confidence_score` (via `ConfidenceBadge`) — never show an answer without them.
+- The `DisclaimerBanner` must be present on every page that can show an answer.
+- Use functional components and hooks; colocate component-specific styles with the component.
+- `user_type` and `consent_to_log` are required fields on every outgoing chat request payload — don't add new request fields without updating `PLAN.md` §6.
+- Surface backend/network errors as a visible UI state — never fail silently on a failed chat request.

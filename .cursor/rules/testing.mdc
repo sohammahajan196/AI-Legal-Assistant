@@ -1,0 +1,14 @@
+---
+description: Testing conventions for backend (pytest) and frontend
+globs: backend/tests/**/*.py,frontend/**/*.test.ts,frontend/**/*.test.tsx
+alwaysApply: false
+---
+
+# Testing Conventions
+
+- No test may make a real network call to Gemini, Redis, or a live FAISS build — mock the LLM client and use `fakeredis`/temp-dir indices, per the acceptance criteria in `TASKS.md`.
+- RAG chain and retrieval tests use a small fixture corpus (~10-15 hand-written chunks), never the full production corpus — keeps tests fast and deterministic.
+- Every new module in `app/rag/` or `app/services/` ships with at least one unit test covering both a success case and a failure/edge case (e.g. the refusal path, a validation failure).
+- API tests use `TestClient`/`httpx.AsyncClient` and must cover the auth-failure (401) and rate-limit (429) paths, not just the happy path.
+- Prefer `pytest-asyncio` for async code under test; don't wrap async functions in `asyncio.run()` inside tests.
+- Frontend component tests should assert on rendered citations/confidence/disclaimer presence, not just "renders without crashing".
