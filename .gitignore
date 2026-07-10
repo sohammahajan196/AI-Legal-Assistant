@@ -1,0 +1,29 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# --- Node / Next.js ---
+node_modules/
+.next/
+out/
+
+# --- Environment ---
+.env
+.env.local
+
+# --- Generated data artifacts (see backend/data/**/.gitkeep) ---
+backend/data/faiss_index/*
+!backend/data/faiss_index/.gitkeep
+backend/data/processed/*
+!backend/data/processed/.gitkeep
+backend/data/app.db
+backend/eval/results/*
+!backend/eval/results/.gitkeep
+
+# --- OS ---
+.DS_Store
+Thumbs.db

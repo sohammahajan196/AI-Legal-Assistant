@@ -1,0 +1,36 @@
+# Core API
+fastapi
+uvicorn[standard]
+
+# Config & validation
+pydantic
+pydantic-settings
+
+# RAG orchestration
+langchain
+langchain-community
+langchain-google-genai
+langchain-huggingface
+
+# Retrieval
+faiss-cpu
+rank-bm25
+sentence-transformers
+
+# Storage / caching / rate limiting
+sqlalchemy
+redis
+slowapi
+
+# Utilities
+python-dotenv
+httpx
+
+# Testing
+pytest
+pytest-asyncio
+fakeredis
+
+# NOTE: versions are intentionally left unpinned in this scaffold (T02).
+# Pin exact versions (e.g. via `pip freeze > requirements.txt`) once the
+# environment is first installed.

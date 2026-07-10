@@ -1,0 +1,41 @@
+# Local/demo deployment: backend + frontend + redis.
+# See PLAN.md Section 13 and TASKS.md T53.
+# NOTE: backend/frontend Dockerfiles are placeholders (T51/T52) until their
+# respective build steps are implemented - `docker compose up` will not yet
+# produce a working app.
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  backend:
+    build:
+      context: ./backend
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    volumes:
+      - faiss_index:/app/data/faiss_index
+      - sqlite_data:/app/data
+    depends_on:
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  redis_data:
+  faiss_index:
+  sqlite_data:
