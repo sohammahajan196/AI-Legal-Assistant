@@ -1,10 +1,10 @@
 # Core API
-fastapi
-uvicorn[standard]
+fastapi==0.139.0
+uvicorn[standard]==0.51.0
 
 # Config & validation
-pydantic
-pydantic-settings
+pydantic==2.13.4
+pydantic-settings==2.14.2
 
 # RAG orchestration
 langchain
@@ -23,14 +23,16 @@ redis
 slowapi
 
 # Utilities
-python-dotenv
-httpx
+python-dotenv==1.2.2
+httpx==0.28.1
 
 # Testing
-pytest
-pytest-asyncio
+pytest==9.1.1
+pytest-asyncio==1.4.0
 fakeredis
 
-# NOTE: versions are intentionally left unpinned in this scaffold (T02).
-# Pin exact versions (e.g. via `pip freeze > requirements.txt`) once the
-# environment is first installed.
+# NOTE (T02): fastapi/uvicorn/pydantic/pydantic-settings/httpx/pytest/pytest-asyncio
+# are pinned to the versions verified to boot the app + run tests in a fresh
+# virtualenv (see README). Remaining deps (langchain*, faiss-cpu, sentence-transformers,
+# sqlalchemy, redis, slowapi, fakeredis) are introduced by later tasks and will be
+# pinned via `pip freeze` when those tasks first install/verify them.

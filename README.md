@@ -12,6 +12,28 @@ confidence score.
 Project scaffolding only. Folder/file structure is in place; business logic has not yet been
 implemented. Follow `TASKS.md` for the dependency-ordered build plan, starting at Phase 0.
 
+## Backend Quick Start (Phase 0)
+
+Minimal steps to boot the FastAPI skeleton (TASKS.md T02). A comprehensive setup guide
+(ingestion, index build, Docker Compose, env vars) lands with T54.
+
+```bash
+cd backend
+python -m venv .venv
+# Windows: .venv\Scripts\activate | macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+Then visit `http://127.0.0.1:8000/` — it should return `{"name": "AI Legal Assistant API", "status": "ok"}`.
+
+Run the backend test suite with:
+
+```bash
+cd backend
+pytest -q
+```
+
 ## Setup (TODO - to be completed as part of TASKS.md T54)
 
 - [ ] Backend local dev setup (`backend/`, Python virtualenv, `requirements.txt`)
