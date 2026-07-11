@@ -14,18 +14,24 @@ implemented. Follow `TASKS.md` for the dependency-ordered build plan, starting a
 
 ## Backend Quick Start (Phase 0)
 
-Minimal steps to boot the FastAPI skeleton (TASKS.md T02). A comprehensive setup guide
-(ingestion, index build, Docker Compose, env vars) lands with T54.
+Minimal steps to boot the FastAPI skeleton (TASKS.md T02/T03). A comprehensive setup guide
+(ingestion, index build, Docker Compose, all env vars) lands with T54.
 
 ```bash
 cd backend
 python -m venv .venv
 # Windows: .venv\Scripts\activate | macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
+cp ../.env.example .env   # Windows: copy ..\.env.example .env
+# then edit .env and set a real GOOGLE_API_KEY - the app refuses to start without one
 uvicorn app.main:app --reload
 ```
 
-Then visit `http://127.0.0.1:8000/` — it should return `{"name": "AI Legal Assistant API", "status": "ok"}`.
+Then visit `http://127.0.0.1:8000/` — it should return `{"name": "AI Legal Assistant API", "status": "ok"}`,
+and the terminal should show a structured JSON log line for `application_startup`.
+
+`GOOGLE_API_KEY` is validated at startup (`app/core/config.py`) — a missing or blank value
+raises a clear error immediately instead of booting into a broken state (TASKS.md T03).
 
 Run the backend test suite with:
 

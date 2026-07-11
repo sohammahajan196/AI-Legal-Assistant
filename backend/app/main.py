@@ -6,24 +6,41 @@ Responsible for:
 - Registering routers from app.api.routes
 - Wiring startup/shutdown hooks (e.g. loading the FAISS/BM25 indices once at boot)
 
-See PLAN.md Section 8 and TASKS.md T02.
+See PLAN.md Section 8, TASKS.md T02/T03, and general.mdc.
+
+NOTE: importing `app.core.config` below eagerly instantiates `Settings()`, so
+a missing/blank `GOOGLE_API_KEY` now makes the process fail fast at import
+time with a clear pydantic validation error, rather than booting silently
+and failing later inside a request (see TASKS.md T03).
 """
 
+import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
 from fastapi import FastAPI
 
+from app.core.config import settings
+from app.core.logging import configure_logging
+
 # TODO: from app.api.routes import chat, domains, health, sessions
+
+configure_logging()
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
-    """Placeholder startup/shutdown hook (e.g. load FAISS/BM25 indices into memory).
+    """Startup/shutdown hook.
 
-    TODO: implement once app.rag.vectorstore / app.rag.bm25_index exist.
+    Currently just emits structured startup/shutdown log lines (T03).
+
+    TODO: also load the FAISS/BM25 indices into memory once
+    app.rag.vectorstore / app.rag.bm25_index exist.
     """
+    logger.info("application_startup", extra={"gemini_model": settings.gemini_model})
     yield
+    logger.info("application_shutdown")
 
 
 app = FastAPI(title="AI Legal Assistant API", lifespan=lifespan)
