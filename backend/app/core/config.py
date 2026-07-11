@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     retrieval_top_k: int = 20
     rerank_top_n: int = 5
 
+    # Hybrid retrieval fusion weights (semantic vs. keyword leg). Must sum to
+    # a positive total; EnsembleRetriever normalizes internally either way.
+    hybrid_semantic_weight: float = 0.5
+    hybrid_keyword_weight: float = 0.5
+
     # Confidence thresholds
     confidence_refusal_threshold: float = 0.4
     confidence_caution_threshold: float = 0.6
@@ -43,6 +48,7 @@ class Settings(BaseSettings):
     # Storage
     sqlite_db_path: str = "./data/app.db"
     faiss_index_dir: str = "./data/faiss_index"
+    bm25_index_dir: str = "./data/bm25_index"
 
     # Cache / rate limiting
     redis_url: str = "redis://localhost:6379/0"

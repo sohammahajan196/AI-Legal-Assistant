@@ -92,6 +92,32 @@ def chunk_to_record(chunk: LegalChunk) -> dict[str, Any]:
     }
 
 
+def record_to_chunk(record: dict[str, Any]) -> LegalChunk:
+    """Deserialize a processed JSONL record into a ``LegalChunk``."""
+    return LegalChunk(
+        domain=str(record["domain"]),
+        act_name=str(record["act_name"]),
+        act_year=int(record["act_year"]),
+        chapter=record.get("chapter"),
+        section_number=str(record["section_number"]),
+        section_title=record.get("section_title"),
+        source_citation=str(record["source_citation"]),
+        text=str(record["text"]),
+    )
+
+
+def load_processed_chunks(processed_root: Path) -> list[LegalChunk]:
+    """Load all domain JSONL files produced by ingestion (T12)."""
+    chunks: list[LegalChunk] = []
+    for domain in LEGAL_DOMAINS:
+        path = processed_root / f"{domain}.jsonl"
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            chunks.append(record_to_chunk(json.loads(line)))
+    return chunks
+
+
 def parse_act_file(
     path: Path,
     *,
