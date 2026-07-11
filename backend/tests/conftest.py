@@ -1,5 +1,7 @@
 """Shared pytest fixtures/setup for the backend test suite.
 
+See TASKS.md T03/T04 and testing.mdc.
+
 Sets safe fallback values for required secrets (e.g. GOOGLE_API_KEY, see
 TASKS.md T03) *before* test modules are collected, so importing `app.main` -
 which eagerly instantiates `Settings()` - doesn't fail in a clean checkout
