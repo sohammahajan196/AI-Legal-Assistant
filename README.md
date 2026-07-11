@@ -33,11 +33,56 @@ and the terminal should show a structured JSON log line for `application_startup
 `GOOGLE_API_KEY` is validated at startup (`app/core/config.py`) — a missing or blank value
 raises a clear error immediately instead of booting into a broken state (TASKS.md T03).
 
-Run the backend test suite with:
+## Backend Testing (Phase 0)
+
+The test harness uses `pytest` + `pytest-asyncio` (TASKS.md T04). From `backend/` with your
+virtualenv activated:
+
+```bash
+# CI-style quiet run (recommended for local checks and CI)
+pytest -q
+
+# Verbose output with per-test names
+pytest -v
+
+# Run only the harness smoke tests (sync + async)
+pytest tests/test_harness.py -v
+```
+
+Expected: all tests pass (including a trivial sync test and an async `pytest-asyncio` example
+in `tests/test_harness.py`). No real network calls, Gemini API key, or Redis instance is
+required — `tests/conftest.py` supplies safe test defaults.
+
+To (re)generate criminal-domain raw corpus files (TASKS.md T05):
 
 ```bash
 cd backend
-pytest -q
+python scripts/curate_criminal.py
+pytest tests/test_corpus_criminal.py -v
+```
+
+To (re)generate civil-domain raw corpus files (TASKS.md T06):
+
+```bash
+cd backend
+python scripts/curate_civil.py
+pytest tests/test_corpus_civil.py -v
+```
+
+To (re)generate family-domain raw corpus files (TASKS.md T07):
+
+```bash
+cd backend
+python scripts/curate_family.py
+pytest tests/test_corpus_family.py -v
+```
+
+To (re)generate labour-domain raw corpus files (TASKS.md T08):
+
+```bash
+cd backend
+python scripts/curate_labour.py
+pytest tests/test_corpus_labour.py -v
 ```
 
 ## Setup (TODO - to be completed as part of TASKS.md T54)

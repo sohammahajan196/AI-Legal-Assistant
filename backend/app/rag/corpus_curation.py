@@ -21,12 +21,16 @@ CRPC_PDF_URL = "https://www.indiacode.nic.in/bitstream/123456789/6796/1/ccp1973.
 CPC_PDF_URL = "https://www.indiacode.nic.in/bitstream/123456789/2191/1/aA1908-05.pdf"
 HMA_PDF_URL = "https://www.indiacode.nic.in/bitstream/123456789/13814/1/the_hindu_marriage_act,_1955.pdf"
 SMA_PDF_URL = "https://www.indiacode.nic.in/bitstream/123456789/15480/1/special_marriage_act.pdf"
+IDA_PDF_URL = "https://www.indiacode.nic.in/bitstream/123456789/20352/1/the_industrial_disputes_act.pdf"
+COW_PDF_URL = "https://www.indiacode.nic.in/bitstream/123456789/15793/1/aA2019-29.pdf"
 
 IPC_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/2263?locale=en"
 CRPC_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/15247?locale=en"
 CPC_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/2191?locale=en"
 HMA_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/1560?locale=en"
 SMA_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/1387?locale=en"
+IDA_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/15191?locale=en"
+COW_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/15793?locale=en"
 
 # Matches corpus section headers like "Section 304A." (TASKS.md T05 / T11).
 SECTION_HEADER_RE = re.compile(r"^Section\s+(\d+[A-Z]?)\.\s", re.MULTILINE)
@@ -103,10 +107,26 @@ SMA_SOURCE = ActSource(
     india_code_handle_url=SMA_INDIA_CODE_HANDLE,
 )
 
+IDA_SOURCE = ActSource(
+    filename="ida_1947.txt",
+    act_name="Industrial Disputes Act",
+    act_year=1947,
+    pdf_url=IDA_PDF_URL,
+    india_code_handle_url=IDA_INDIA_CODE_HANDLE,
+)
+
+COW_SOURCE = ActSource(
+    filename="code_on_wages_2019.txt",
+    act_name="Code on Wages",
+    act_year=2019,
+    pdf_url=COW_PDF_URL,
+    india_code_handle_url=COW_INDIA_CODE_HANDLE,
+)
+
 # Acts whose sections use an em-dash / horizontal-bar title separator in the source PDF.
-_EM_DASH_ACTS = frozenset({IPC_SOURCE, CPC_SOURCE, HMA_SOURCE, SMA_SOURCE})
+_EM_DASH_ACTS = frozenset({IPC_SOURCE, CPC_SOURCE, HMA_SOURCE, SMA_SOURCE, IDA_SOURCE, COW_SOURCE})
 # Acts that may inline amendment history repeating section numbers.
-_DEDUPE_ACTS = frozenset({CPC_SOURCE, HMA_SOURCE, SMA_SOURCE})
+_DEDUPE_ACTS = frozenset({CPC_SOURCE, HMA_SOURCE, SMA_SOURCE, IDA_SOURCE, COW_SOURCE})
 
 
 def extract_pdf_text(pdf_bytes: bytes) -> str:
@@ -181,6 +201,28 @@ def _strip_sma_arrangement(text: str) -> str:
     )
 
 
+def _strip_ida_arrangement(text: str) -> str:
+    """Drop the table-of-contents block; keep the operative IDA act text."""
+    return _strip_em_dash_arrangement(
+        text,
+        section_one_pattern=(
+            r"1\. Short title, extent and commencement\.[\u2014\u2013\u2015\-\uFFFD]\(1\) This Act may be called the Industrial Disputes\s+"
+            r"Act,\s*1947\."
+        ),
+        heading="CHAPTER I",
+    )
+
+
+def _strip_cow_arrangement(text: str) -> str:
+    """Drop the table-of-contents block; keep the operative Code on Wages act text."""
+    return _strip_em_dash_arrangement(
+        text,
+        section_one_pattern=(
+            r"1\. Short title, extent and commencement\.[\u2014\u2013\u2015\-\uFFFD]\(1\) This Act may be called the Code on Wages, 2019\."
+        ),
+    )
+
+
 def _strip_cpc_arrangement(text: str) -> str:
     """Drop the table-of-contents block; keep the operative CPC act text."""
     marker_match = re.search(
@@ -201,6 +243,68 @@ def _strip_cpc_arrangement(text: str) -> str:
     if order_idx != -1:
         body = body[:order_idx]
     return body
+
+
+def _normalize_ida_inline_section_breaks(text: str) -> str:
+    """Insert line breaks before section markers inlined with footnote text."""
+    text = re.sub(
+        r"(\d)\[(\d{1,3}[A-Z]?\. (?!Ins\.|Subs\.|Rep\.|Added |Section )[A-Z])",
+        r"\1\n\2",
+        text,
+    )
+    text = re.sub(
+        r"\](\d{1,3}[A-Z]?\. (?!Ins\.|Subs\.|Rep\.|Added |Section )[A-Z])",
+        r"]\n\1",
+        text,
+    )
+    return text
+
+
+def _strip_ida_state_amendments(text: str) -> str:
+    """Remove inline state-adaptation blocks from consolidated India Code IDA PDFs."""
+    next_section = (
+        r"(?=\n\d{1,3}[A-Z]?\. (?!Ins\.|Subs\.|Rep\.|Added |Section )[A-Z])"
+    )
+    text = re.sub(
+        rf"\nSTATE AMENDMENT\n.*?{next_section}",
+        "\n",
+        text,
+        flags=re.DOTALL,
+    )
+    text = re.sub(
+        r"\n(?:Rajasthan|Manipur|Kerala|Karnataka|Orissa|Assam|Andhra Pradesh|Meghalaya)\s*\n"
+        r"(?:Amendment|Insertion).*?(?=\n(?:\d{1,3}[A-Z]?\. (?!Ins\.|Subs\.|Rep\.|Added |Section )[A-Z]|STATE AMENDMENT|CHAPTER ))",
+        "\n",
+        text,
+        flags=re.DOTALL,
+    )
+    text = re.sub(
+        r"\nInsertion of new[^\n]*\n.*?(?=\n\d{1,3}[A-Z]?\. Conciliation officers)",
+        "\n",
+        text,
+        flags=re.DOTALL,
+    )
+    text = re.sub(r"\[Vide[^\]]*\]", "", text, flags=re.DOTALL)
+    return text
+
+
+def _drop_premature_ida_nine_series(text: str) -> str:
+    """Drop state-inserted section 9C–9J blocks that appear before central section 4."""
+    parts = re.split(r"(?=^Section \d+[A-Z]?\.\s)", text, flags=re.MULTILINE)
+    if len(parts) <= 1:
+        return text
+
+    preamble = parts[0]
+    seen_four = False
+    kept = [preamble]
+    for part in parts[1:]:
+        match = re.match(r"^Section (9[A-Z]+)\.", part)
+        if match and not seen_four:
+            continue
+        if re.match(r"^Section 4\.", part):
+            seen_four = True
+        kept.append(part)
+    return "".join(kept)
 
 
 def _strip_crpc_arrangement(text: str) -> str:
@@ -319,15 +423,24 @@ def curate_act_text(raw_pdf_text: str, act: ActSource) -> str:
         body = _strip_hma_arrangement(raw_pdf_text)
     elif act is SMA_SOURCE:
         body = _strip_sma_arrangement(raw_pdf_text)
+    elif act is IDA_SOURCE:
+        body = _strip_ida_arrangement(raw_pdf_text)
+    elif act is COW_SOURCE:
+        body = _strip_cow_arrangement(raw_pdf_text)
     else:
         raise ValueError(f"Unsupported act source: {act.filename}")
 
     body = _collapse_whitespace(body)
     if act is CRPC_SOURCE:
         body = _join_crpc_wrapped_titles(body)
+    if act is IDA_SOURCE:
+        body = _normalize_ida_inline_section_breaks(body)
+        body = _strip_ida_state_amendments(body)
     body = normalize_section_headers(body, act)
     if act in _DEDUPE_ACTS:
         body = _dedupe_section_blocks(body)
+    if act is IDA_SOURCE:
+        body = _drop_premature_ida_nine_series(body)
     return body
 
 
