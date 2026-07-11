@@ -23,6 +23,8 @@ HMA_PDF_URL = "https://www.indiacode.nic.in/bitstream/123456789/13814/1/the_hind
 SMA_PDF_URL = "https://www.indiacode.nic.in/bitstream/123456789/15480/1/special_marriage_act.pdf"
 IDA_PDF_URL = "https://www.indiacode.nic.in/bitstream/123456789/20352/1/the_industrial_disputes_act.pdf"
 COW_PDF_URL = "https://www.indiacode.nic.in/bitstream/123456789/15793/1/aA2019-29.pdf"
+CPA_PDF_URL = "https://www.indiacode.nic.in/bitstream/123456789/15256/1/eng201935.pdf"
+TPA_PDF_URL = "https://www.indiacode.nic.in/bitstream/123456789/2338/1/A1882-04.pdf"
 
 IPC_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/2263?locale=en"
 CRPC_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/15247?locale=en"
@@ -31,6 +33,8 @@ HMA_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/1560?loca
 SMA_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/1387?locale=en"
 IDA_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/15191?locale=en"
 COW_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/15793?locale=en"
+CPA_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/15256?locale=en"
+TPA_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/2338?locale=en"
 
 # Matches corpus section headers like "Section 304A." (TASKS.md T05 / T11).
 SECTION_HEADER_RE = re.compile(r"^Section\s+(\d+[A-Z]?)\.\s", re.MULTILINE)
@@ -123,10 +127,26 @@ COW_SOURCE = ActSource(
     india_code_handle_url=COW_INDIA_CODE_HANDLE,
 )
 
+CPA_SOURCE = ActSource(
+    filename="cpa_2019.txt",
+    act_name="Consumer Protection Act",
+    act_year=2019,
+    pdf_url=CPA_PDF_URL,
+    india_code_handle_url=CPA_INDIA_CODE_HANDLE,
+)
+
+TPA_SOURCE = ActSource(
+    filename="tpa_1882.txt",
+    act_name="Transfer of Property Act",
+    act_year=1882,
+    pdf_url=TPA_PDF_URL,
+    india_code_handle_url=TPA_INDIA_CODE_HANDLE,
+)
+
 # Acts whose sections use an em-dash / horizontal-bar title separator in the source PDF.
-_EM_DASH_ACTS = frozenset({IPC_SOURCE, CPC_SOURCE, HMA_SOURCE, SMA_SOURCE, IDA_SOURCE, COW_SOURCE})
+_EM_DASH_ACTS = frozenset({IPC_SOURCE, CPC_SOURCE, HMA_SOURCE, SMA_SOURCE, IDA_SOURCE, COW_SOURCE, CPA_SOURCE, TPA_SOURCE})
 # Acts that may inline amendment history repeating section numbers.
-_DEDUPE_ACTS = frozenset({CPC_SOURCE, HMA_SOURCE, SMA_SOURCE, IDA_SOURCE, COW_SOURCE})
+_DEDUPE_ACTS = frozenset({CPC_SOURCE, HMA_SOURCE, SMA_SOURCE, IDA_SOURCE, COW_SOURCE, CPA_SOURCE, TPA_SOURCE})
 
 
 def extract_pdf_text(pdf_bytes: bytes) -> str:
@@ -221,6 +241,30 @@ def _strip_cow_arrangement(text: str) -> str:
             r"1\. Short title, extent and commencement\.[\u2014\u2013\u2015\-\uFFFD]\(1\) This Act may be called the Code on Wages, 2019\."
         ),
     )
+
+
+def _strip_cpa_arrangement(text: str) -> str:
+    """Drop the table-of-contents block; keep the operative CPA act text."""
+    return _strip_em_dash_arrangement(
+        text,
+        section_one_pattern=(
+            r"1\. Short title, extent, commencement and application\.[\u2014\u2013\u2015\-\uFFFD]\(1\) This Act may be called the Consumer\s+"
+            r"Protection Act, 2019\."
+        ),
+    )
+
+
+def _strip_tpa_arrangement(text: str) -> str:
+    """Drop the table-of-contents block; keep the operative TPA act text."""
+    marker_match = re.search(
+        r"Preamble\.[\u2014\u2013\u2015\-\uFFFD]WHEREAS it is expedient to define and amend certain parts of the law\s+"
+        r"relating to the transfer of property by act of parties",
+        text,
+        flags=re.DOTALL,
+    )
+    if marker_match is None:
+        raise ValueError("TPA PDF text missing expected preamble marker")
+    return text[marker_match.start() :]
 
 
 def _strip_cpc_arrangement(text: str) -> str:
@@ -427,6 +471,10 @@ def curate_act_text(raw_pdf_text: str, act: ActSource) -> str:
         body = _strip_ida_arrangement(raw_pdf_text)
     elif act is COW_SOURCE:
         body = _strip_cow_arrangement(raw_pdf_text)
+    elif act is CPA_SOURCE:
+        body = _strip_cpa_arrangement(raw_pdf_text)
+    elif act is TPA_SOURCE:
+        body = _strip_tpa_arrangement(raw_pdf_text)
     else:
         raise ValueError(f"Unsupported act source: {act.filename}")
 

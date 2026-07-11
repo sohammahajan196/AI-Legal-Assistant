@@ -6,19 +6,29 @@ metadata; prints a per-domain summary report.
 
 See TASKS.md T13.
 
-Usage:
+Usage (from backend/):
     python scripts/validate_corpus.py
 """
 
+from __future__ import annotations
 
-def main() -> None:
-    """Entry point for the corpus validation CLI.
+import sys
+from pathlib import Path
 
-    TODO: implement the validation checks described above and exit
-    non-zero if any check fails.
-    """
-    raise NotImplementedError
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(BACKEND_ROOT))
+
+from app.rag.corpus_validation import format_validation_report, validate_corpus  # noqa: E402
+
+PROCESSED_ROOT = BACKEND_ROOT / "data" / "processed"
+
+
+def main() -> int:
+    """Validate processed JSONL corpora and print a per-domain summary."""
+    report = validate_corpus(PROCESSED_ROOT)
+    print(format_validation_report(report))
+    return 0 if report.ok else 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
