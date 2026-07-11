@@ -19,10 +19,14 @@ import pdfplumber
 IPC_PDF_URL = "https://www.indiacode.nic.in/bitstream/123456789/15289/1/ipc_act.pdf"
 CRPC_PDF_URL = "https://www.indiacode.nic.in/bitstream/123456789/6796/1/ccp1973.pdf"
 CPC_PDF_URL = "https://www.indiacode.nic.in/bitstream/123456789/2191/1/aA1908-05.pdf"
+HMA_PDF_URL = "https://www.indiacode.nic.in/bitstream/123456789/13814/1/the_hindu_marriage_act,_1955.pdf"
+SMA_PDF_URL = "https://www.indiacode.nic.in/bitstream/123456789/15480/1/special_marriage_act.pdf"
 
 IPC_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/2263?locale=en"
 CRPC_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/15247?locale=en"
 CPC_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/2191?locale=en"
+HMA_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/1560?locale=en"
+SMA_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/1387?locale=en"
 
 # Matches corpus section headers like "Section 304A." (TASKS.md T05 / T11).
 SECTION_HEADER_RE = re.compile(r"^Section\s+(\d+[A-Z]?)\.\s", re.MULTILINE)
@@ -31,7 +35,7 @@ SECTION_HEADER_RE = re.compile(r"^Section\s+(\d+[A-Z]?)\.\s", re.MULTILINE)
 _IPC_SECTION_RE = re.compile(
     r"^(?:\d+\[)?(?:\[\s*)?(\d{1,3}[A-Z]?)\.\s+"
     r"(?!Subs\.|Ins\.|Rep\.|Added |The words|The proviso|Certain words|Now see|Illustrations?\b)"
-    r"(.+?)(?:\.[\u2014\u2013]|\.--|\.-)",
+    r"(.+?)(?:\.[\u2014\u2013\u2015]|\.--|\.-)",
     re.MULTILINE,
 )
 
@@ -83,6 +87,27 @@ CPC_SOURCE = ActSource(
     india_code_handle_url=CPC_INDIA_CODE_HANDLE,
 )
 
+HMA_SOURCE = ActSource(
+    filename="hma_1955.txt",
+    act_name="Hindu Marriage Act",
+    act_year=1955,
+    pdf_url=HMA_PDF_URL,
+    india_code_handle_url=HMA_INDIA_CODE_HANDLE,
+)
+
+SMA_SOURCE = ActSource(
+    filename="sma_1954.txt",
+    act_name="Special Marriage Act",
+    act_year=1954,
+    pdf_url=SMA_PDF_URL,
+    india_code_handle_url=SMA_INDIA_CODE_HANDLE,
+)
+
+# Acts whose sections use an em-dash / horizontal-bar title separator in the source PDF.
+_EM_DASH_ACTS = frozenset({IPC_SOURCE, CPC_SOURCE, HMA_SOURCE, SMA_SOURCE})
+# Acts that may inline amendment history repeating section numbers.
+_DEDUPE_ACTS = frozenset({CPC_SOURCE, HMA_SOURCE, SMA_SOURCE})
+
 
 def extract_pdf_text(pdf_bytes: bytes) -> str:
     """Extract plain text from an official bare-act PDF using pdfplumber."""
@@ -113,10 +138,53 @@ def _strip_ipc_arrangement(text: str) -> str:
     return text[start:]
 
 
+def _strip_em_dash_arrangement(
+    text: str,
+    *,
+    section_one_pattern: str,
+    heading: str = "PRELIMINARY",
+    amendment_marker: str | None = None,
+) -> str:
+    """Drop TOC blocks and keep operative text for em-dash-style acts."""
+    marker_match = re.search(section_one_pattern, text, flags=re.DOTALL)
+    if marker_match is None:
+        raise ValueError("PDF text missing expected section 1 marker")
+    heading_idx = text.rfind(heading, 0, marker_match.start())
+    start = heading_idx if heading_idx != -1 else marker_match.start()
+    body = text[start:]
+    if amendment_marker:
+        amendment_idx = body.find(amendment_marker)
+        if amendment_idx != -1:
+            body = body[:amendment_idx]
+    return body
+
+
+def _strip_hma_arrangement(text: str) -> str:
+    """Drop the table-of-contents block; keep the operative HMA act text."""
+    return _strip_em_dash_arrangement(
+        text,
+        section_one_pattern=(
+            r"1\. Short title and extent\.[\u2014\u2013\u2015\-\uFFFD]\(1\) This Act may be called the Hindu Marriage\s+"
+            r"Act, 1955\."
+        ),
+    )
+
+
+def _strip_sma_arrangement(text: str) -> str:
+    """Drop the table-of-contents block; keep the operative SMA act text."""
+    return _strip_em_dash_arrangement(
+        text,
+        section_one_pattern=(
+            r"1\. Short title, extent and commencement\.[\u2014\u2013\u2015\-\uFFFD]\(1\) This Act may be called the Special Marriage\s+"
+            r"Act, 1954\."
+        ),
+    )
+
+
 def _strip_cpc_arrangement(text: str) -> str:
     """Drop the table-of-contents block; keep the operative CPC act text."""
     marker_match = re.search(
-        r"1\. Short title, commencement and extent\.[\u2014\u2013\-\uFFFD]\(1\) This Act may be cited as the Code of Civil\s+"
+        r"1\. Short title, commencement and extent\.[\u2014\u2013\u2015\-\uFFFD]\(1\) This Act may be cited as the Code of Civil\s+"
         r"Procedure, 1908\.",
         text,
         flags=re.DOTALL,
@@ -232,7 +300,7 @@ def normalize_crpc_section_headers(text: str) -> str:
 
 def normalize_section_headers(text: str, act: ActSource) -> str:
     """Convert PDF-style section numbers to consistent `Section N.` headers."""
-    if act in (IPC_SOURCE, CPC_SOURCE):
+    if act in _EM_DASH_ACTS:
         return normalize_ipc_section_headers(text)
     if act is CRPC_SOURCE:
         return normalize_crpc_section_headers(text)
@@ -247,6 +315,10 @@ def curate_act_text(raw_pdf_text: str, act: ActSource) -> str:
         body = _strip_crpc_arrangement(raw_pdf_text)
     elif act is CPC_SOURCE:
         body = _strip_cpc_arrangement(raw_pdf_text)
+    elif act is HMA_SOURCE:
+        body = _strip_hma_arrangement(raw_pdf_text)
+    elif act is SMA_SOURCE:
+        body = _strip_sma_arrangement(raw_pdf_text)
     else:
         raise ValueError(f"Unsupported act source: {act.filename}")
 
@@ -254,7 +326,7 @@ def curate_act_text(raw_pdf_text: str, act: ActSource) -> str:
     if act is CRPC_SOURCE:
         body = _join_crpc_wrapped_titles(body)
     body = normalize_section_headers(body, act)
-    if act is CPC_SOURCE:
+    if act in _DEDUPE_ACTS:
         body = _dedupe_section_blocks(body)
     return body
 
