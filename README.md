@@ -85,11 +85,56 @@ python scripts/curate_labour.py
 pytest tests/test_corpus_labour.py -v
 ```
 
+To (re)generate consumer-domain raw corpus files (TASKS.md T09):
+
+```bash
+cd backend
+python scripts/curate_consumer.py
+pytest tests/test_corpus_consumer.py -v
+```
+
+To (re)generate property-domain raw corpus files (TASKS.md T10):
+
+```bash
+cd backend
+python scripts/curate_property.py
+pytest tests/test_corpus_property.py -v
+```
+
+## Corpus ingestion and index build (Phase 2–3)
+
+After raw act texts exist under `backend/data/raw/<domain>/`, run the full offline
+pipeline from `backend/` with your virtualenv activated:
+
+```bash
+# 1. Parse raw acts into processed JSONL chunks (TASKS.md T12)
+python scripts/ingest.py
+
+# 2. QA pass over processed chunks — exits non-zero on issues (TASKS.md T13)
+python scripts/validate_corpus.py
+
+# 3. Validate + build FAISS and BM25 indices in one command (TASKS.md T17)
+python scripts/build_index.py
+```
+
+Step 3 runs corpus validation first and **aborts without writing indices** if
+validation fails. On success it writes:
+
+- `data/faiss_index/` — semantic FAISS index (TASKS.md T15)
+- `data/bm25_index/` — keyword BM25 index (TASKS.md T16)
+
+The first FAISS build downloads the HuggingFace embedding model
+(`EMBEDDING_MODEL`, default `BAAI/bge-base-en-v1.5`) — allow a few minutes on a
+fresh machine. BM25 build is fast.
+
+Index output paths are configurable via `FAISS_INDEX_DIR` and `BM25_INDEX_DIR` in
+`.env` (see `.env.example`).
+
 ## Setup (TODO - to be completed as part of TASKS.md T54)
 
 - [ ] Backend local dev setup (`backend/`, Python virtualenv, `requirements.txt`)
 - [ ] Frontend local dev setup (`frontend/`, Node, `npm install`)
-- [ ] Data ingestion (`backend/scripts/ingest.py`) and index build (`backend/scripts/build_index.py`)
+- [ ] Data ingestion (`backend/scripts/ingest.py`) and index build (`backend/scripts/build_index.py`) — see **Corpus ingestion and index build** above
 - [ ] Running the evaluation script (`backend/eval/run_eval.py`)
 - [ ] Docker Compose usage (`docker compose up`)
 - [ ] Required environment variables (see `.env.example`) and where to obtain the Gemini API key

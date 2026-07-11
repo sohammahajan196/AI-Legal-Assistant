@@ -19,6 +19,8 @@ out/
 # --- Generated data artifacts (see backend/data/**/.gitkeep) ---
 backend/data/faiss_index/*
 !backend/data/faiss_index/.gitkeep
+backend/data/bm25_index/*
+!backend/data/bm25_index/.gitkeep
 backend/data/processed/*
 !backend/data/processed/.gitkeep
 backend/data/app.db
