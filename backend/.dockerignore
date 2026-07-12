@@ -1,0 +1,32 @@
+# Virtualenv and Python caches
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local secrets and env files (config comes from runtime env vars)
+.env
+.env.*
+!.env.example
+
+# Tests, eval scripts, and offline tooling — not needed to serve the API
+tests/
+eval/
+scripts/
+
+# Raw/processed corpus and index artifacts — built offline and mounted at runtime
+data/raw/
+data/processed/
+data/faiss_index/*
+!data/faiss_index/.gitkeep
+data/bm25_index/*
+!data/bm25_index/.gitkeep
+*.db
+
+# Git and editor noise
+.git/
+.gitignore
+*.md
