@@ -24,6 +24,23 @@ class LegalDomain(str, Enum):
     OTHER = "other"
 
 
+# Human-readable labels for the six source domains (excludes `other`).
+# Names align with PLAN.md §1.
+DOMAIN_LABELS: dict[LegalDomain, str] = {
+    LegalDomain.CRIMINAL: "Criminal",
+    LegalDomain.CIVIL: "Civil",
+    LegalDomain.FAMILY: "Family",
+    LegalDomain.LABOUR: "Labour",
+    LegalDomain.CONSUMER: "Consumer Protection",
+    LegalDomain.PROPERTY: "Property",
+}
+
+
+def supported_domains() -> list[tuple[LegalDomain, str]]:
+    """Return the six configured domains with labels, excluding `other`."""
+    return [(domain, DOMAIN_LABELS[domain]) for domain in LegalDomain if domain != LegalDomain.OTHER]
+
+
 class LLMStructuredAnswer(BaseModel):
     """What Gemini itself must return via `.with_structured_output(...)`.
 
