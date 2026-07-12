@@ -4,18 +4,85 @@ Per-user_type prompt templates with the legal disclaimer instruction baked in.
 See PLAN.md Section 5 and TASKS.md T27.
 """
 
+from __future__ import annotations
+
+from langchain_core.messages import BaseMessage
+from langchain_core.prompts import ChatPromptTemplate
+
 DISCLAIMER_INSTRUCTION = (
     "Always remind the user that this answer is not a substitute for licensed "
     "legal counsel and does not constitute binding legal advice."
 )
 
-# TODO: define real layperson / law_student / lawyer prompt templates (e.g.
-# via langchain_core.prompts.ChatPromptTemplate), each embedding
-# DISCLAIMER_INSTRUCTION in the system message and adjusting explanation
-# depth/tone per TASKS.md T27 acceptance criteria.
+DEFAULT_USER_TYPE = "layperson"
 
-USER_TYPE_TEMPLATES: dict[str, str] = {
-    "layperson": "",
-    "law_student": "",
-    "lawyer": "",
+# Shared grounding rules every template inherits, so no user_type variant can
+# accidentally drop the "don't hallucinate" / disclaimer instructions -- only
+# the audience-specific tone/depth paragraph differs between templates.
+_BASE_SYSTEM_INSTRUCTIONS = (
+    "You are an AI legal assistant specializing in Indian law. Answer ONLY "
+    "using the retrieved source excerpts given in the context below -- never "
+    "invent, assume, or recall legal content from outside that context. Every "
+    "substantive claim must be traceable to one of the provided excerpts. If "
+    "the context does not contain enough information to answer confidently, "
+    "say so plainly instead of guessing.\n\n" + DISCLAIMER_INSTRUCTION
+)
+
+_AUDIENCE_INSTRUCTIONS: dict[str, str] = {
+    "layperson": (
+        "Audience: a layperson with no legal training. Explain concepts in "
+        "plain, everyday language and avoid legal jargon; when a legal term "
+        "is unavoidable, briefly define it in simple terms. Keep the answer "
+        "concise and practical."
+    ),
+    "law_student": (
+        "Audience: a law student. You may use standard legal terminology and "
+        "cite section numbers precisely. Explain the underlying legal "
+        "reasoning and any relevant distinctions or elements of the "
+        "provision, as you would in a case-briefing."
+    ),
+    "lawyer": (
+        "Audience: a practicing lawyer. Be precise and concise: use exact "
+        "statutory language and citations, skip introductory explanations of "
+        "basic legal concepts, and focus on the specific provisions, "
+        "exceptions, and procedural detail relevant to the query."
+    ),
 }
+
+# Rendered system prompt per user_type -- each is a distinct string that
+# still contains the shared base instructions (incl. DISCLAIMER_INSTRUCTION).
+USER_TYPE_TEMPLATES: dict[str, str] = {
+    user_type: f"{_BASE_SYSTEM_INSTRUCTIONS}\n\n{audience_instruction}"
+    for user_type, audience_instruction in _AUDIENCE_INSTRUCTIONS.items()
+}
+
+_HUMAN_TEMPLATE = (
+    "Retrieved context (cite the relevant citation ids in `used_citation_ids`):\n"
+    "{context}\n\n"
+    "Question: {query}"
+)
+
+
+def get_prompt_template(user_type: str) -> ChatPromptTemplate:
+    """Return the `ChatPromptTemplate` for the given `user_type`.
+
+    Falls back to the `layperson` template for an unrecognized value so a
+    malformed/legacy `user_type` degrades to the safest, most
+    explanation-heavy tone rather than raising.
+    """
+    system_prompt = USER_TYPE_TEMPLATES.get(user_type, USER_TYPE_TEMPLATES[DEFAULT_USER_TYPE])
+    return ChatPromptTemplate.from_messages(
+        [
+            ("system", system_prompt),
+            ("human", _HUMAN_TEMPLATE),
+        ]
+    )
+
+
+def build_prompt(user_type: str, query: str, context: str) -> list[BaseMessage]:
+    """Render the `user_type` template with `query` and retrieved `context`
+    substituted, returning chat messages ready for
+    `app.rag.structured_llm.generate_structured_answer`.
+    """
+    template = get_prompt_template(user_type)
+    return template.format_messages(query=query, context=context)
