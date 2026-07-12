@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     enable_reranker: bool = False
     retrieval_top_k: int = 20
     rerank_top_n: int = 5
+    reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
     # Hybrid retrieval fusion weights (semantic vs. keyword leg). Must sum to
     # a positive total; EnsembleRetriever normalizes internally either way.
