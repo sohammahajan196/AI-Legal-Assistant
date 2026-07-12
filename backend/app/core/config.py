@@ -81,6 +81,13 @@ class Settings(BaseSettings):
         description="Max recent query embeddings kept per user_type for semantic cache lookup.",
     )
     rate_limit_per_minute: int = 30
+    rate_limit_tier_limits: str = Field(
+        default="",
+        description=(
+            'Comma-separated tier:requests_per_minute pairs (e.g. "standard:30,premium:100"). '
+            "Tiers not listed fall back to rate_limit_per_minute."
+        ),
+    )
 
     @field_validator("google_api_key")
     @classmethod
