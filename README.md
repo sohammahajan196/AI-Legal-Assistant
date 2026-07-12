@@ -130,12 +130,45 @@ fresh machine. BM25 build is fast.
 Index output paths are configurable via `FAISS_INDEX_DIR` and `BM25_INDEX_DIR` in
 `.env` (see `.env.example`).
 
+## Evaluation (Phase 11)
+
+`backend/eval/qa_dataset.jsonl` is a hand-written set of 30–50 legal questions
+covering all 6 domains, each with an `expected_domain`, `expected_act`, and
+`expected_sections` (TASKS.md T48). `backend/eval/run_eval.py` scores the
+system against it, after the indices above have been built:
+
+```bash
+cd backend
+
+# Retrieval-only: no LLM calls, scores FAISS+BM25 hybrid retrieval (TASKS.md T49)
+python eval/run_eval.py
+
+# Also runs every question through the full RAG chain and scores answer
+# correctness — makes real Gemini API calls (TASKS.md T50)
+python eval/run_eval.py --with-answers --user-type lawyer
+```
+
+Useful flags: `--top-k` (retrieval depth, default 5), `--dataset`/`--output`
+to point at alternate files, `--markdown-output`/`--csv-output` for the
+human-readable reports.
+
+Every run prints per-question and aggregate precision@k/recall@k to stdout,
+and writes three report files under `eval/results/`:
+
+- `retrieval_report.json` — full machine-readable report (retrieval metrics,
+  plus an `answers` section with citation-correctness metrics, per-domain
+  breakdowns, and flagged questions when `--with-answers` is used)
+- `eval_report.md` — Markdown summary of the same data, including a table of
+  any questions that triggered an **unexpected refusal** or an
+  **unexpectedly confident wrong answer**
+- `eval_report.csv` — one row per question, for spreadsheet analysis
+
 ## Setup (TODO - to be completed as part of TASKS.md T54)
 
 - [ ] Backend local dev setup (`backend/`, Python virtualenv, `requirements.txt`)
 - [ ] Frontend local dev setup (`frontend/`, Node, `npm install`)
 - [ ] Data ingestion (`backend/scripts/ingest.py`) and index build (`backend/scripts/build_index.py`) — see **Corpus ingestion and index build** above
-- [ ] Running the evaluation script (`backend/eval/run_eval.py`)
+- [x] Running the evaluation script (`backend/eval/run_eval.py`) — see **Evaluation** above
 - [ ] Docker Compose usage (`docker compose up`)
 - [ ] Required environment variables (see `.env.example`) and where to obtain the Gemini API key
 
