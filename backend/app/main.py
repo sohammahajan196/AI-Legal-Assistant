@@ -20,10 +20,10 @@ from typing import AsyncIterator
 
 from fastapi import FastAPI
 
+from app.api.routes import chat, sessions
 from app.core.config import settings
 from app.core.logging import configure_logging
-
-# TODO: from app.api.routes import chat, domains, health, sessions
+from app.core.rate_limit import register_rate_limiting
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -44,10 +44,11 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="AI Legal Assistant API", lifespan=lifespan)
+register_rate_limiting(app, chat.limiter)
 
 # TODO: app.include_router(health.router)
-# TODO: app.include_router(chat.router, prefix="/api/v1")
-# TODO: app.include_router(sessions.router, prefix="/api/v1")
+app.include_router(chat.router, prefix="/api/v1")
+app.include_router(sessions.router, prefix="/api/v1")
 # TODO: app.include_router(domains.router, prefix="/api/v1")
 
 

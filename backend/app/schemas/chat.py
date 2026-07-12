@@ -27,3 +27,17 @@ class ChatResponse(LegalAnswerResponse):
     """
 
     pass
+
+
+class HistoryMessage(BaseModel):
+    """A single stored conversation turn (see app.services.session_store)."""
+
+    role: str
+    content: str
+
+
+class SessionHistoryResponse(BaseModel):
+    """Response payload for GET /api/v1/sessions/{session_id}/history."""
+
+    session_id: str
+    messages: list[HistoryMessage]
