@@ -64,6 +64,22 @@ class Settings(BaseSettings):
 
     # Cache / rate limiting
     redis_url: str = "redis://localhost:6379/0"
+    cache_ttl_seconds: int = Field(
+        default=3600,
+        ge=1,
+        description="TTL in seconds for cached LegalAnswerResponse entries.",
+    )
+    cache_semantic_similarity_threshold: float = Field(
+        default=0.95,
+        ge=0.0,
+        le=1.0,
+        description="Cosine-similarity threshold for semantic near-duplicate cache hits.",
+    )
+    cache_semantic_max_entries: int = Field(
+        default=100,
+        ge=1,
+        description="Max recent query embeddings kept per user_type for semantic cache lookup.",
+    )
     rate_limit_per_minute: int = 30
 
     @field_validator("google_api_key")
