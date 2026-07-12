@@ -1,12 +1,19 @@
 /**
  * Top-level chat container composing the message list and input.
- * See TASKS.md T43.
+ * See TASKS.md T43/T45.
  */
 "use client";
 
 import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from "react";
 
+import DisclaimerBanner, {
+  DEFAULT_CONSENT_TO_LOG,
+} from "./DisclaimerBanner";
 import MessageBubble from "./MessageBubble";
+import {
+  buildChatRequestPayload,
+  type ChatApiRequestBody,
+} from "@/lib/chatPayload";
 
 interface ChatMessage {
   id: string;
@@ -17,6 +24,9 @@ interface ChatMessage {
 export default function ChatWindow() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
+  const [consentToLog, setConsentToLog] = useState(DEFAULT_CONSENT_TO_LOG);
+  const [lastOutgoingPayload, setLastOutgoingPayload] =
+    useState<ChatApiRequestBody | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
   const trimmedInput = input.trim();
   const canSend = trimmedInput.length > 0;
@@ -33,6 +43,13 @@ export default function ChatWindow() {
     if (!canSend) {
       return;
     }
+
+    const outgoingPayload = buildChatRequestPayload({
+      query: trimmedInput,
+      userType: "layperson",
+      consentToLog,
+    });
+    setLastOutgoingPayload(outgoingPayload);
 
     setMessages((current) => [
       ...current,
@@ -59,7 +76,12 @@ export default function ChatWindow() {
 
   return (
     <div className="mx-auto flex h-[100dvh] w-full max-w-4xl flex-col px-3 py-4 sm:px-6 sm:py-6">
-      <header className="mb-4 shrink-0 border-b border-slate-200 pb-4">
+      <DisclaimerBanner
+        consentToLog={consentToLog}
+        onConsentChange={setConsentToLog}
+      />
+
+      <header className="mb-4 mt-4 shrink-0 border-b border-slate-200 pb-4">
         <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
           AI Legal Assistant
         </p>
@@ -119,6 +141,16 @@ export default function ChatWindow() {
           </button>
         </div>
       </form>
+
+      {lastOutgoingPayload ? (
+        <output
+          aria-hidden="true"
+          data-testid="last-outgoing-payload"
+          className="hidden"
+        >
+          {JSON.stringify(lastOutgoingPayload)}
+        </output>
+      ) : null}
     </div>
   );
 }
