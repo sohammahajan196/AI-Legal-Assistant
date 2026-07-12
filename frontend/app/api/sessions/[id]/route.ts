@@ -6,11 +6,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   // TODO: forward to
-  // `${process.env.BACKEND_API_URL}/api/v1/sessions/${params.id}/history`
+  // `${process.env.BACKEND_API_URL}/api/v1/sessions/${id}/history`
   // with the server-side bearer token attached.
-  return NextResponse.json({ error: "Not implemented" }, { status: 501 });
+  return NextResponse.json({ error: "Not implemented", sessionId: id }, { status: 501 });
 }
