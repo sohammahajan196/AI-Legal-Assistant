@@ -1,15 +1,18 @@
 """Tests for app.rag.structured_llm retry-with-repair behavior. See TASKS.md T23-T24.
 
-These cover T23's acceptance criteria directly (retry-then-succeed,
-retry-exhaustion, and repair-prompt content). T24 expands edge-case coverage
-(empty citations, wrong enum, malformed JSON, first-try success) separately.
+T23's acceptance criteria are covered directly (retry-then-succeed,
+retry-exhaustion, and repair-prompt content). T24 expands edge-case coverage:
+empty citations, wrong enum value, malformed JSON, and successful first-try
+path. All tests are fully mocked -- no real network/LLM calls.
 """
 
 from __future__ import annotations
 
+import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import ValidationError
 
 from app.rag.structured_llm import (
@@ -26,6 +29,17 @@ def _validation_error() -> ValidationError:
     except ValidationError as exc:
         return exc
     raise AssertionError("expected ValidationError")
+
+
+def _malformed_json_error() -> json.JSONDecodeError:
+    """A real json.JSONDecodeError, as would surface from a truncated/invalid
+    JSON completion (json.JSONDecodeError is a ValueError subclass, so it's
+    caught by the same repair loop as Pydantic's ValidationError)."""
+    try:
+        json.loads("{answer: 'missing quotes and unclosed")
+    except json.JSONDecodeError as exc:
+        return exc
+    raise AssertionError("expected JSONDecodeError")
 
 
 def _mock_llm_with_structured_llm(structured_llm: MagicMock) -> MagicMock:
@@ -90,3 +104,105 @@ async def test_validation_error_text_is_included_in_retry_prompt():
     assert first_call_prompt == "Original prompt text"
     assert "Original prompt text" in retry_call_prompt
     assert str(error) in retry_call_prompt
+
+
+@pytest.mark.asyncio
+async def test_successful_first_try_makes_no_retry_call():
+    """A schema-valid result on the very first attempt is returned as-is,
+    with no repair/retry call made at all."""
+    valid_result = LLMStructuredAnswer(
+        answer="Theft is defined under Section 378 IPC.",
+        legal_domain=LegalDomain.CRIMINAL,
+        used_citation_ids=["ipc-378-0"],
+    )
+    structured_llm = MagicMock()
+    structured_llm.ainvoke = AsyncMock(return_value=valid_result)
+    llm = _mock_llm_with_structured_llm(structured_llm)
+
+    result = await generate_structured_answer(llm, "What is theft?", LLMStructuredAnswer)
+
+    assert result is valid_result
+    structured_llm.ainvoke.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_empty_citations_is_a_valid_first_try_result():
+    """An answer with no used_citation_ids (e.g. a refusal) is a legitimate
+    schema-valid result and must not trigger a retry."""
+    refusal_result = LLMStructuredAnswer(
+        answer="The retrieved sources do not cover this question.",
+        legal_domain=LegalDomain.OTHER,
+        used_citation_ids=[],
+        is_refusal=True,
+    )
+    structured_llm = MagicMock()
+    structured_llm.ainvoke = AsyncMock(return_value=refusal_result)
+    llm = _mock_llm_with_structured_llm(structured_llm)
+
+    result = await generate_structured_answer(llm, "An out-of-scope query", LLMStructuredAnswer)
+
+    assert result is refusal_result
+    assert result.used_citation_ids == []
+    structured_llm.ainvoke.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_wrong_enum_value_triggers_retry_then_succeeds():
+    """An invalid `legal_domain` enum value on the first attempt is a
+    ValidationError that triggers exactly one repair retry, then succeeds."""
+    wrong_enum_error = _validation_error()
+    valid_result = LLMStructuredAnswer(answer="Corrected answer.", legal_domain=LegalDomain.FAMILY)
+    structured_llm = MagicMock()
+    structured_llm.ainvoke = AsyncMock(side_effect=[wrong_enum_error, valid_result])
+    llm = _mock_llm_with_structured_llm(structured_llm)
+
+    result = await generate_structured_answer(llm, "A family law question", LLMStructuredAnswer)
+
+    assert result is valid_result
+    assert structured_llm.ainvoke.await_count == 2
+    retry_prompt = structured_llm.ainvoke.await_args_list[1].args[0]
+    assert "legal_domain" in retry_prompt
+
+
+@pytest.mark.asyncio
+async def test_malformed_json_triggers_retry_then_succeeds():
+    """A malformed/truncated JSON completion (JSONDecodeError) on the first
+    attempt triggers exactly one repair retry, then succeeds."""
+    malformed_json_error = _malformed_json_error()
+    valid_result = LLMStructuredAnswer(answer="Corrected answer.", legal_domain=LegalDomain.CIVIL)
+    structured_llm = MagicMock()
+    structured_llm.ainvoke = AsyncMock(side_effect=[malformed_json_error, valid_result])
+    llm = _mock_llm_with_structured_llm(structured_llm)
+
+    result = await generate_structured_answer(llm, "A civil law question", LLMStructuredAnswer)
+
+    assert result is valid_result
+    assert structured_llm.ainvoke.await_count == 2
+    retry_prompt = structured_llm.ainvoke.await_args_list[1].args[0]
+    assert str(malformed_json_error) in retry_prompt
+
+
+@pytest.mark.asyncio
+async def test_repair_appends_to_chat_message_list_prompts():
+    """When the prompt is a list of chat messages (not a plain string), the
+    repair instruction is appended as an additional HumanMessage rather than
+    silently dropped or breaking the message list shape."""
+    error = _validation_error()
+    valid_result = LLMStructuredAnswer(answer="ok", legal_domain=LegalDomain.LABOUR)
+    structured_llm = MagicMock()
+    structured_llm.ainvoke = AsyncMock(side_effect=[error, valid_result])
+    llm = _mock_llm_with_structured_llm(structured_llm)
+
+    original_messages = [
+        SystemMessage(content="You are a legal assistant."),
+        HumanMessage(content="What is the minimum wage?"),
+    ]
+
+    result = await generate_structured_answer(llm, original_messages, LLMStructuredAnswer)
+
+    assert result is valid_result
+    retry_prompt = structured_llm.ainvoke.await_args_list[1].args[0]
+    assert isinstance(retry_prompt, list)
+    assert retry_prompt[:2] == original_messages
+    assert isinstance(retry_prompt[-1], HumanMessage)
+    assert str(error) in retry_prompt[-1].content
