@@ -24,6 +24,12 @@ class Settings(BaseSettings):
         description="Gemini API key (required). Set in a .env file - see .env.example.",
     )
     gemini_model: str = "gemini-2.5-flash"
+    gemini_temperature: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=2.0,
+        description="Sampling temperature for Gemini generation (0 = deterministic).",
+    )
 
     # Auth
     backend_api_tokens: str = ""
