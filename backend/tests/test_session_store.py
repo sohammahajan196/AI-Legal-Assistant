@@ -72,3 +72,14 @@ def test_append_message_raises_for_unknown_session(isolated_session_store):
             "user",
             "Hello",
         )
+
+
+def test_ensure_session_creates_row_for_client_supplied_id(isolated_session_store):
+    client_session_id = "00000000-0000-0000-0000-000000000001"
+
+    isolated_session_store.ensure_session(client_session_id)
+    isolated_session_store.append_message(client_session_id, "user", "Hello")
+
+    history = isolated_session_store.get_history(client_session_id)
+
+    assert history == [{"role": "user", "content": "Hello"}]

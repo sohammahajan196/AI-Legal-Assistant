@@ -73,6 +73,16 @@ def create_session() -> str:
     return session_id
 
 
+def ensure_session(session_id: str) -> None:
+    """Create a session row for a client-supplied id when it does not exist yet."""
+    now = datetime.now(UTC)
+
+    with _session_factory()() as db:
+        if db.get(SessionRecord, session_id) is None:
+            db.add(SessionRecord(id=session_id, created_at=now))
+            db.commit()
+
+
 def append_message(session_id: str, role: str, content: str) -> None:
     """Append a message to a session's history (`messages` table)."""
     now = datetime.now(UTC)

@@ -149,6 +149,25 @@ async def test_cache_hit_still_persists_turn_to_session(
     mock_chain.assert_awaited_once()
 
 
+@pytest.mark.asyncio
+async def test_client_supplied_session_id_is_created_on_first_turn(
+    fake_redis, test_settings, mock_chain, isolated_session_store
+):
+    client_session_id = "00000000-0000-0000-0000-000000000099"
+
+    await chat_service.handle_chat_request(
+        "What is theft?",
+        session_id=client_session_id,
+        user_type="layperson",
+    )
+
+    history = isolated_session_store.get_history(client_session_id)
+    assert history == [
+        {"role": "user", "content": "What is theft?"},
+        {"role": "assistant", "content": SAMPLE_RESPONSE.answer},
+    ]
+
+
 # --- API layer must use chat_service only --------------------------------------
 
 

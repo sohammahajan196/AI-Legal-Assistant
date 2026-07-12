@@ -16,7 +16,7 @@ import logging
 from app.rag.cache import get_cached_response, set_cached_response
 from app.rag.chain import run_rag_chain
 from app.schemas.legal_answer import LegalAnswerResponse
-from app.services.session_store import append_message, get_history
+from app.services.session_store import append_message, ensure_session, get_history
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +25,7 @@ def _persist_messages(session_id: str | None, query: str, answer: str) -> None:
     """Append the user/assistant turn to session history when a session exists."""
     if not session_id:
         return
+    ensure_session(session_id)
     try:
         append_message(session_id, "user", query)
         append_message(session_id, "assistant", answer)
