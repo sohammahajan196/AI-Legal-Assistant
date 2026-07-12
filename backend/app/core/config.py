@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     confidence_refusal_threshold: float = 0.4
     confidence_caution_threshold: float = 0.6
 
+    # Confidence score weights (retrieval_component vs. groundedness_component,
+    # see PLAN.md Section 7 and app/rag/confidence.py). Named w1/w2 there.
+    confidence_retrieval_weight: float = 0.5
+    confidence_groundedness_weight: float = 0.5
+
     # Storage
     sqlite_db_path: str = "./data/app.db"
     faiss_index_dir: str = "./data/faiss_index"
