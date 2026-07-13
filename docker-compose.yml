@@ -1,8 +1,18 @@
 # Local/demo deployment: backend + frontend + redis.
 # See PLAN.md Section 13 and TASKS.md T53.
-# NOTE: backend/frontend Dockerfiles are placeholders (T51/T52) until their
-# respective build steps are implemented - `docker compose up` will not yet
-# produce a working app.
+#
+# Prerequisites:
+#   1. cp .env.example .env
+#      - Set GOOGLE_API_KEY (required for chat).
+#      - Keep BACKEND_API_TOKEN identical to the token in BACKEND_API_TOKENS.
+#   2. One-time corpus + index build (populates named volumes):
+#        docker compose run --rm backend python scripts/ingest.py
+#        docker compose run --rm backend python scripts/build_index.py
+#      Or build locally under backend/ and copy artifacts into the volumes.
+#   3. docker compose up --build
+#
+# Chat UI: http://localhost:3000
+# Backend health: http://localhost:8000/api/v1/health
 
 services:
   redis:
@@ -11,29 +21,57 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
 
   backend:
     build:
       context: ./backend
     env_file:
       - .env
+    environment:
+      # Compose service DNS names — override any localhost values from .env.
+      REDIS_URL: redis://redis:6379/0
     ports:
       - "8000:8000"
     volumes:
       - faiss_index:/app/data/faiss_index
       - sqlite_data:/app/data
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')",
+        ]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
     env_file:
       - .env
+    environment:
+      # Runtime proxy target — must not be baked into the frontend image (T52).
+      BACKEND_API_URL: http://backend:8000
     ports:
       - "3000:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   redis_data:

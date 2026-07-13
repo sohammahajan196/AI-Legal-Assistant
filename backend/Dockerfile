@@ -27,6 +27,9 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 # Application code layer — changes here do not invalidate the pip layer above.
 COPY app ./app
+# Offline ingest/index-build CLIs (PLAN.md Section 13: docker compose run backend …).
+COPY scripts ./scripts
+COPY data/raw ./data/raw
 
 # Writable data dirs; FAISS index is persisted via a named volume at runtime.
 RUN mkdir -p data/faiss_index data/bm25_index data/processed \

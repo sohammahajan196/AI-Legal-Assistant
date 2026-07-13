@@ -12,13 +12,11 @@ __pycache__/
 .env.*
 !.env.example
 
-# Tests, eval scripts, and offline tooling — not needed to serve the API
+# Tests and eval scripts — not needed to serve the API
 tests/
 eval/
-scripts/
 
-# Raw/processed corpus and index artifacts — built offline and mounted at runtime
-data/raw/
+# Processed chunks and index artifacts — built offline into named volumes at runtime
 data/processed/
 data/faiss_index/*
 !data/faiss_index/.gitkeep
