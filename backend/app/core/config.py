@@ -23,7 +23,7 @@ class Settings(BaseSettings):
         ...,
         description="Gemini API key (required). Set in a .env file - see .env.example.",
     )
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3.5-flash"
     gemini_temperature: float = Field(
         default=0.0,
         ge=0.0,
