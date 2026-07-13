@@ -1,0 +1,22 @@
+# Dependencies and build output
+node_modules/
+.next/
+out/
+coverage/
+
+# Local env files and secrets
+.env
+.env.*
+!.env.example
+
+# Tests and local tooling output
+*.test.ts
+*.test.tsx
+vitest.config.ts
+vitest.setup.ts
+
+# Cache/editor noise
+.npm/
+.DS_Store
+*.log
+README.md
