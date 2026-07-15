@@ -1,5 +1,5 @@
 /**
- * App shell — wider canvas with a fixed viewport fade at the bottom edge.
+ * App shell — balanced side gutters with a soft white viewport frost.
  */
 import { cn } from "@/lib/utils";
 
@@ -13,16 +13,26 @@ export default function AppShell({ children, className }: AppShellProps) {
     <>
       <div
         className={cn(
-          "relative mx-auto min-h-screen w-full max-w-[92rem] px-3 py-3 sm:px-5 sm:py-4 lg:px-6 xl:px-8",
+          "relative mx-auto min-h-screen w-full max-w-7xl px-6 py-4 sm:px-10 sm:py-5 lg:px-14 xl:px-16",
           className
         )}
       >
         {children}
       </div>
-      {/* Fixed to the viewport, not page content — soft fade at screen bottom. */}
+      {/* Fixed to the viewport — faint white frost, not a dark fade. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 h-24 bg-gradient-to-t from-[var(--bg-shell)] via-[color-mix(in_srgb,var(--bg-shell)_72%,transparent)] to-transparent sm:h-28"
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 h-28 sm:h-32"
+        style={{
+          background:
+            "linear-gradient(to top, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.03) 45%, rgba(255,255,255,0) 100%)",
+          backdropFilter: "blur(10px)",
+          WebkitBackdropFilter: "blur(10px)",
+          maskImage:
+            "linear-gradient(to top, black 0%, black 35%, transparent 100%)",
+          WebkitMaskImage:
+            "linear-gradient(to top, black 0%, black 35%, transparent 100%)",
+        }}
       />
     </>
   );

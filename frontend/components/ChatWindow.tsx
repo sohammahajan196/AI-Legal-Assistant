@@ -247,7 +247,7 @@ export default function ChatWindow() {
 
       <section id="legal-desk" className="pb-4 pt-6">
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <h1 className="font-display text-[1.85rem] leading-[1.15] tracking-[-0.025em] text-ink sm:text-[2.15rem]">
+          <h1 className="font-display text-[1.7rem] font-medium leading-[1.2] tracking-[-0.018em] text-ink sm:text-[1.95rem]">
             Ask a legal question.
           </h1>
           <p className="max-w-sm text-sm leading-5 text-ink-muted sm:text-right">

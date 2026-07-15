@@ -30,7 +30,7 @@ export default function ChatHeader({
             <Landmark className="h-4 w-4" aria-hidden="true" />
           </div>
           <div>
-            <p className="font-display text-[1.65rem] leading-none tracking-[-0.02em] text-ink">
+            <p className="font-display text-[1.55rem] font-medium leading-none tracking-[-0.015em] text-ink">
               Nyāya
             </p>
             <p className="mt-1.5 text-[0.68rem] tracking-[0.04em] text-ink-muted">

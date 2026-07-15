@@ -6,7 +6,7 @@ export default function AppFooter() {
     <footer className="mt-8 border-t border-[var(--border-subtle)] py-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="font-display text-[1.35rem] leading-none tracking-[-0.02em] text-ink">
+          <p className="font-display text-[1.25rem] font-medium leading-none tracking-[-0.015em] text-ink">
             Nyāya
           </p>
           <p className="mt-1 max-w-md text-sm leading-6 text-ink-muted">

@@ -1,20 +1,20 @@
 /**
- * Root layout — Instrument Serif for titles, Manrope + IBM Plex Mono for UI.
+ * Root layout — Source Serif 4 for titles, Manrope + IBM Plex Mono for UI.
  */
 import "./globals.css";
 import type { Metadata } from "next";
 import {
   IBM_Plex_Mono,
-  Instrument_Serif,
   Manrope,
+  Source_Serif_4,
 } from "next/font/google";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-const instrumentSerif = Instrument_Serif({
+const sourceSerif = Source_Serif_4({
   subsets: ["latin"],
   variable: "--font-display",
-  weight: "400",
+  weight: ["400", "500", "600"],
   style: ["normal", "italic"],
   display: "swap",
 });
@@ -46,7 +46,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${instrumentSerif.variable} ${manrope.variable} ${plexMono.variable}`}
+      className={`${sourceSerif.variable} ${manrope.variable} ${plexMono.variable}`}
     >
       <body className="min-h-screen bg-shell font-sans text-ink antialiased">
         <TooltipProvider delayDuration={300}>{children}</TooltipProvider>

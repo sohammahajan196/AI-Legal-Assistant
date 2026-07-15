@@ -12,9 +12,8 @@ const config: Config = {
         sans: ["var(--font-sans)", "ui-sans-serif", "system-ui", "sans-serif"],
         display: [
           "var(--font-display)",
+          "Source Serif 4",
           "Iowan Old Style",
-          "Palatino Linotype",
-          "Palatino",
           "Georgia",
           "serif",
         ],
