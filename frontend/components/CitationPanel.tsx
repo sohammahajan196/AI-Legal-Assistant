@@ -31,7 +31,7 @@ export default function CitationPanel({
         <p className="text-[0.62rem] font-medium uppercase tracking-[0.14em] text-ink-cream-muted">
           Sources
         </p>
-        <h2 className="mt-1 font-display text-xl font-medium text-ink-cream">
+        <h2 className="mt-1 font-display text-[1.45rem] leading-none tracking-[-0.02em] text-ink-cream">
           Citations
         </h2>
         {(legalDomain || typeof confidenceScore === "number" || isRefusal) && (

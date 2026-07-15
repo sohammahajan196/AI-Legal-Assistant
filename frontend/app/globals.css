@@ -95,7 +95,9 @@
   }
 
   .font-display {
-    font-family: var(--font-display), ui-serif, Georgia, serif;
+    font-family: var(--font-display), "Iowan Old Style", "Palatino Linotype",
+      Palatino, Georgia, serif;
+    font-weight: 400;
   }
 
   .font-mono {

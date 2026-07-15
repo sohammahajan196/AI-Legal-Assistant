@@ -1,21 +1,20 @@
 /**
- * Root layout — Manrope + IBM Plex Mono for a quiet product feel.
- * Display font kept for titles only.
+ * Root layout — Instrument Serif for titles, Manrope + IBM Plex Mono for UI.
  */
 import "./globals.css";
 import type { Metadata } from "next";
 import {
-  Cormorant_Garamond,
   IBM_Plex_Mono,
+  Instrument_Serif,
   Manrope,
 } from "next/font/google";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-const cormorant = Cormorant_Garamond({
+const instrumentSerif = Instrument_Serif({
   subsets: ["latin"],
   variable: "--font-display",
-  weight: ["400", "500", "600", "700"],
+  weight: "400",
   style: ["normal", "italic"],
   display: "swap",
 });
@@ -47,7 +46,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${cormorant.variable} ${manrope.variable} ${plexMono.variable}`}
+      className={`${instrumentSerif.variable} ${manrope.variable} ${plexMono.variable}`}
     >
       <body className="min-h-screen bg-shell font-sans text-ink antialiased">
         <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
