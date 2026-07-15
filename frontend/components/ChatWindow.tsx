@@ -1,43 +1,45 @@
 /**
- * Top-level chat container composing the message list and input.
- * See TASKS.md T43/T45/T46/T47.
+ * Top-level chat container — state orchestration for the Judicial Editorial UI.
+ * See TASKS.md T43/T45/T46/T47 and the frontend UI plan.
  */
 "use client";
 
-import {
-  FormEvent,
-  KeyboardEvent,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import DisclaimerBanner, {
+import ChatComposer from "@/components/chat/ChatComposer";
+import ErrorAlert from "@/components/chat/ErrorAlert";
+import MessageList, {
+  type ChatMessageView,
+} from "@/components/chat/MessageList";
+import CitationPanel from "@/components/CitationPanel";
+import AppShell from "@/components/layout/AppShell";
+import ChatHeader from "@/components/layout/ChatHeader";
+import DisclaimerStrip, {
   DEFAULT_CONSENT_TO_LOG,
-} from "./DisclaimerBanner";
-import MessageBubble from "./MessageBubble";
-import UserTypeSelector, {
+} from "@/components/layout/DisclaimerStrip";
+import EditorialHero from "@/components/layout/EditorialHero";
+import ScrollReveal from "@/components/motion/ScrollReveal";
+import {
   DEFAULT_USER_TYPE,
   type UserType,
-} from "./UserTypeSelector";
+} from "@/components/UserTypeSelector";
 import {
   ApiClientError,
   fetchSessionHistory,
   sendChatMessage,
 } from "@/lib/apiClient";
-import { buildChatRequestPayload, type ChatApiRequestBody } from "@/lib/chatPayload";
+import {
+  buildChatRequestPayload,
+  type ChatApiRequestBody,
+} from "@/lib/chatPayload";
+import {
+  cacheAssistantMeta,
+  getCachedAssistantMeta,
+} from "@/lib/messageCache";
 import { getOrCreateSessionId } from "@/lib/sessionStorage";
 import type { SourceCitation } from "@/lib/types";
 
-interface ChatMessage {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  citations?: SourceCitation[];
-  confidenceScore?: number;
-  disclaimer?: string;
-}
+interface ChatMessage extends ChatMessageView {}
 
 export default function ChatWindow() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -48,11 +50,14 @@ export default function ChatWindow() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorStatus, setErrorStatus] = useState<number | undefined>();
   const [lastOutgoingPayload, setLastOutgoingPayload] =
     useState<ChatApiRequestBody | null>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
-  const trimmedInput = input.trim();
-  const canSend = trimmedInput.length > 0 && !isSending && !isLoadingHistory;
+
+  const activeAssistant = [...messages]
+    .reverse()
+    .find((m) => m.role === "assistant");
 
   const scrollToBottom = useCallback(() => {
     const list = messageListRef.current;
@@ -64,7 +69,7 @@ export default function ChatWindow() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, scrollToBottom]);
+  }, [messages, isSending, scrollToBottom]);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,11 +87,27 @@ export default function ChatWindow() {
         }
 
         setMessages(
-          history.map((message) => ({
-            id: crypto.randomUUID(),
-            role: message.role,
-            content: message.content,
-          }))
+          history.map((message) => {
+            const base: ChatMessage = {
+              id: crypto.randomUUID(),
+              role: message.role,
+              content: message.content,
+            };
+            if (message.role === "assistant") {
+              const cached = getCachedAssistantMeta(message.content);
+              if (cached) {
+                return {
+                  ...base,
+                  citations: cached.citations,
+                  confidenceScore: cached.confidenceScore,
+                  legalDomain: cached.legalDomain,
+                  isRefusal: cached.isRefusal,
+                  disclaimer: cached.disclaimer,
+                };
+              }
+            }
+            return base;
+          })
         );
       } catch (error) {
         if (!cancelled) {
@@ -95,6 +116,9 @@ export default function ChatWindow() {
               ? error.message
               : "Unable to load previous messages.";
           setErrorMessage(message);
+          if (error instanceof ApiClientError) {
+            setErrorStatus(error.status);
+          }
         }
       } finally {
         if (!cancelled) {
@@ -110,158 +134,186 @@ export default function ChatWindow() {
     };
   }, []);
 
-  async function handleSend() {
-    if (!canSend || !sessionId) {
-      return;
-    }
-
-    const query = trimmedInput;
-    const outgoingPayload = buildChatRequestPayload({
-      query,
-      sessionId,
-      userType,
-      consentToLog,
-    });
+  async function sendWithPayload(payload: {
+    query: string;
+    sessionId: string;
+    userType: UserType;
+    consentToLog: boolean;
+  }) {
+    const outgoingPayload = buildChatRequestPayload(payload);
     setLastOutgoingPayload(outgoingPayload);
     setErrorMessage(null);
-    setInput("");
+    setErrorStatus(undefined);
     setIsSending(true);
 
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       role: "user",
-      content: query,
+      content: payload.query,
     };
     setMessages((current) => [...current, userMessage]);
 
     try {
-      const response = await sendChatMessage({
-        query,
-        sessionId,
-        userType,
-        consentToLog,
+      const response = await sendChatMessage(payload);
+
+      const assistantMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: response.answer,
+        citations: response.citations,
+        confidenceScore: response.confidence_score,
+        legalDomain: response.legal_domain,
+        isRefusal: response.is_refusal,
+        disclaimer: response.disclaimer,
+      };
+
+      cacheAssistantMeta(response.answer, {
+        citations: response.citations,
+        confidenceScore: response.confidence_score,
+        legalDomain: response.legal_domain,
+        isRefusal: response.is_refusal,
+        disclaimer: response.disclaimer,
       });
 
-      setMessages((current) => [
-        ...current,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: response.answer,
-          citations: response.citations,
-          confidenceScore: response.confidence_score,
-          disclaimer: response.disclaimer,
-        },
-      ]);
+      setMessages((current) => [...current, assistantMessage]);
     } catch (error) {
       const message =
         error instanceof ApiClientError
           ? error.message
           : "Something went wrong while contacting the assistant.";
       setErrorMessage(message);
+      if (error instanceof ApiClientError) {
+        setErrorStatus(error.status);
+      }
     } finally {
       setIsSending(false);
     }
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    void handleSend();
+  async function handleSend() {
+    const trimmed = input.trim();
+    if (!trimmed || !sessionId || isSending || isLoadingHistory) {
+      return;
+    }
+
+    setInput("");
+    await sendWithPayload({
+      query: trimmed,
+      sessionId,
+      userType,
+      consentToLog,
+    });
   }
 
-  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      void handleSend();
+  async function handleRetry() {
+    if (!lastOutgoingPayload || !sessionId || isSending) {
+      return;
     }
+    // Remove the failed trailing user message if present, then resend.
+    setMessages((current) => {
+      const last = current[current.length - 1];
+      if (last?.role === "user" && last.content === lastOutgoingPayload.query) {
+        return current.slice(0, -1);
+      }
+      return current;
+    });
+    await sendWithPayload({
+      query: lastOutgoingPayload.query,
+      sessionId,
+      userType: lastOutgoingPayload.user_type as UserType,
+      consentToLog: lastOutgoingPayload.consent_to_log,
+    });
   }
+
+  const panelCitations: SourceCitation[] = activeAssistant?.citations ?? [];
 
   return (
-    <div className="mx-auto flex h-[100dvh] w-full max-w-4xl flex-col px-3 py-4 sm:px-6 sm:py-6">
-      <DisclaimerBanner
+    <AppShell>
+      <ChatHeader userType={userType} onUserTypeChange={setUserType} />
+
+      <DisclaimerStrip
         consentToLog={consentToLog}
         onConsentChange={setConsentToLog}
       />
 
-      <header className="mb-4 mt-4 shrink-0 border-b border-slate-200 pb-4">
-        <p className="text-sm font-semibold uppercase tracking-wide text-indigo-600">
-          AI Legal Assistant
-        </p>
-        <h1 className="mt-1 text-xl font-bold text-slate-900 sm:text-2xl">
-          Ask a legal question
-        </h1>
-        <p className="mt-1 text-sm text-slate-600 sm:text-base">
-          Answers are grounded in retrieved legal sources with citations and a
-          confidence score.
-        </p>
-        <UserTypeSelector value={userType} onChange={setUserType} />
-      </header>
+      <EditorialHero />
 
-      {errorMessage ? (
-        <div
-          role="alert"
-          data-testid="chat-error"
-          className="mb-4 shrink-0 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
-        >
-          {errorMessage}
-        </div>
-      ) : null}
+      <section id="legal-desk" className="scroll-mt-8 pb-24 pt-24 lg:pt-32">
+        <ScrollReveal className="mb-12 grid gap-8 lg:grid-cols-[0.75fr_1.25fr] lg:items-end">
+          <div>
+            <p className="font-mono text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-burgundy">
+              The legal research desk
+            </p>
+            <p className="mt-3 font-mono text-[0.62rem] uppercase tracking-[0.16em] text-ink-muted">
+              Session · Private workspace
+            </p>
+          </div>
+          <div>
+            <h2 className="font-display max-w-4xl text-[clamp(3rem,6vw,6.5rem)] font-medium leading-[0.88] tracking-[-0.04em] text-ink">
+              Ask plainly.
+              <span className="block italic text-burgundy">
+                Read critically.
+              </span>
+            </h2>
+            <p className="mt-6 max-w-2xl text-base leading-7 text-ink-muted">
+              Your answer and its evidence stay side by side. The conversation
+              explains the law; the source ledger lets you verify it.
+            </p>
+          </div>
+        </ScrollReveal>
 
-      <div
-        ref={messageListRef}
-        className="min-h-0 flex-1 space-y-4 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 sm:p-6"
-        aria-live="polite"
-        aria-label="Chat messages"
-      >
-        {isLoadingHistory ? (
-          <p className="text-center text-sm text-slate-500 sm:text-base">
-            Loading conversation...
-          </p>
-        ) : messages.length === 0 ? (
-          <p className="text-center text-sm text-slate-500 sm:text-base">
-            Type a question below to start the conversation.
-          </p>
-        ) : (
-          messages.map((message) => (
-            <MessageBubble
-              key={message.id}
-              role={message.role}
-              content={message.content}
-              citations={message.citations}
-              confidenceScore={message.confidenceScore}
-              disclaimer={message.disclaimer}
+        {errorMessage ? (
+          <ErrorAlert
+            message={errorMessage}
+            status={errorStatus}
+            onRetry={lastOutgoingPayload ? () => void handleRetry() : undefined}
+          />
+        ) : null}
+
+        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
+          <ScrollReveal direction="left" className="min-w-0">
+            <MessageList
+              messages={messages}
+              isLoadingHistory={isLoadingHistory}
+              isSending={isSending}
+              listRef={messageListRef}
+              onSelectPrompt={setInput}
             />
-          ))
-        )}
-      </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="mt-4 shrink-0 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4"
-      >
-        <label htmlFor="chat-input" className="sr-only">
-          Your message
-        </label>
-        <textarea
-          id="chat-input"
-          rows={2}
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Ask about Indian law..."
-          disabled={isSending || isLoadingHistory}
-          className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none ring-indigo-500 placeholder:text-slate-400 focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-100 sm:text-base"
-        />
-        <div className="mt-3 flex justify-end">
-          <button
-            type="submit"
-            disabled={!canSend}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300 sm:text-base"
-          >
-            {isSending ? "Sending..." : "Send"}
-          </button>
+            <ChatComposer
+              value={input}
+              onChange={setInput}
+              onSubmit={() => void handleSend()}
+              disabled={isLoadingHistory || !sessionId}
+              isSending={isSending}
+            />
+          </ScrollReveal>
+
+          <ScrollReveal direction="right" delay={100} className="h-full">
+            <CitationPanel
+              citations={panelCitations}
+              confidenceScore={activeAssistant?.confidenceScore}
+              legalDomain={activeAssistant?.legalDomain}
+              isRefusal={activeAssistant?.isRefusal}
+            />
+          </ScrollReveal>
         </div>
-      </form>
+      </section>
+
+      <ScrollReveal>
+        <footer className="grid gap-8 border-t border-ink/15 py-10 sm:grid-cols-2 sm:items-end">
+          <div>
+            <p className="font-display text-3xl font-semibold">Nyāya</p>
+            <p className="mt-2 max-w-sm text-sm leading-6 text-ink-muted">
+              Explainable legal research for Indian statute. Not a substitute
+              for licensed counsel.
+            </p>
+          </div>
+          <div className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-ink-muted sm:text-right">
+            Six legal domains · Primary-source citations · Honest uncertainty
+          </div>
+        </footer>
+      </ScrollReveal>
 
       {lastOutgoingPayload ? (
         <output
@@ -272,6 +324,6 @@ export default function ChatWindow() {
           {JSON.stringify(lastOutgoingPayload)}
         </output>
       ) : null}
-    </div>
+    </AppShell>
   );
 }

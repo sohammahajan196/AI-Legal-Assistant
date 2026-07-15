@@ -16,7 +16,9 @@ describe("ConfidenceBadge", () => {
 
     const badge = screen.getByLabelText(/High confidence: 87%/i);
     expect(badge).toHaveAttribute("data-confidence-level", "high");
-    expect(badge.className).toContain("emerald");
+    expect(badge).toHaveStyle({
+      backgroundColor: "var(--confidence-high-bg)",
+    });
   });
 
   it("renders yellow for mid-range scores between refusal and caution thresholds", () => {
@@ -27,7 +29,9 @@ describe("ConfidenceBadge", () => {
 
     const badge = screen.getByLabelText(/Moderate confidence/i);
     expect(badge).toHaveAttribute("data-confidence-level", "mid");
-    expect(badge.className).toContain("amber");
+    expect(badge).toHaveStyle({
+      backgroundColor: "var(--confidence-mid-bg)",
+    });
   });
 
   it("renders red for scores below the refusal threshold", () => {
@@ -35,7 +39,9 @@ describe("ConfidenceBadge", () => {
 
     const badge = screen.getByLabelText(/Low confidence: 20%/i);
     expect(badge).toHaveAttribute("data-confidence-level", "low");
-    expect(badge.className).toContain("rose");
+    expect(badge).toHaveStyle({
+      backgroundColor: "var(--confidence-low-bg)",
+    });
   });
 
   it("uses backend-aligned threshold boundaries", () => {

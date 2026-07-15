@@ -159,8 +159,10 @@ describe("ChatWindow backend wiring", () => {
       expect(screen.getByText(SAMPLE_RESPONSE.answer)).toBeInTheDocument()
     );
 
-    expect(screen.getByText("Indian Penal Code")).toBeInTheDocument();
-    expect(screen.getByLabelText(/High confidence: 87%/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Indian Penal Code/).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByLabelText(/High confidence: 87%/i).length
+    ).toBeGreaterThan(0);
     expect(screen.getByText(SAMPLE_RESPONSE.disclaimer)).toBeInTheDocument();
   });
 

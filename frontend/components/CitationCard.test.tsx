@@ -18,7 +18,7 @@ describe("CitationCard", () => {
     render(<CitationCard {...SAMPLE_CITATION} />);
 
     expect(screen.getByText("Indian Penal Code")).toBeInTheDocument();
-    expect(screen.getByText("Section 379")).toBeInTheDocument();
+    expect(screen.getByText("§ 379")).toBeInTheDocument();
     expect(
       screen.getByText(
         "Whoever commits theft shall be punished with imprisonment..."

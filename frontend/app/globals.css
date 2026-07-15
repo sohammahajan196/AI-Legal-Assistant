@@ -1,3 +1,212 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/**
+ * Judicial Editorial design tokens.
+ * Warm parchment / ink palette — not purple-gradient AI slop.
+ */
+@layer base {
+  :root {
+    --background: 40 33% 95%;
+    --foreground: 30 20% 10%;
+
+    --card: 40 50% 98%;
+    --card-foreground: 30 20% 10%;
+
+    --popover: 40 50% 98%;
+    --popover-foreground: 30 20% 10%;
+
+    --primary: 0 40% 31%;
+    --primary-foreground: 40 40% 97%;
+
+    --secondary: 38 28% 90%;
+    --secondary-foreground: 30 20% 18%;
+
+    --muted: 38 22% 90%;
+    --muted-foreground: 30 10% 36%;
+
+    --accent: 40 34% 88%;
+    --accent-foreground: 30 20% 14%;
+
+    --destructive: 0 45% 38%;
+    --destructive-foreground: 40 40% 97%;
+
+    --border: 38 28% 84%;
+    --input: 38 28% 84%;
+    --ring: 40 42% 42%;
+
+    --radius: 0.625rem;
+
+    /* Brand tokens (hex for non-HSL surfaces) */
+    --bg-parchment: #f4efe5;
+    --bg-surface: #fffaf2;
+    --ink-primary: #171914;
+    --ink-muted: #5e5b50;
+    --accent-burgundy: #712f38;
+    --accent-brass: #a77d2f;
+    --accent-forest: #163b32;
+    --border-warm: #d9cdbb;
+    --disclaimer-bg: #ece0cb;
+
+    --confidence-high-fg: #3d5c45;
+    --confidence-high-bg: #e8f0ea;
+    --confidence-mid-fg: #8a5a18;
+    --confidence-mid-bg: #f5ebd8;
+    --confidence-low-fg: #7a3535;
+    --confidence-low-bg: #f5e8e8;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    background-color: var(--bg-parchment);
+    color: var(--ink-primary);
+    background-image:
+      radial-gradient(circle at 8% 4%, rgb(167 125 47 / 8%), transparent 24rem),
+      radial-gradient(circle at 92% 38%, rgb(113 47 56 / 6%), transparent 30rem);
+  }
+
+  /* Subtle paper grain — atmospheric, not decorative noise */
+  body::before {
+    content: "";
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-repeat: repeat;
+    background-size: 180px 180px;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display), ui-serif, Georgia, serif;
+  }
+
+  .font-mono {
+    font-family: var(--font-mono), ui-monospace, monospace;
+  }
+
+  .animate-fade-up {
+    animation: fade-up 0.45s ease-out both;
+  }
+
+  .scroll-reveal {
+    opacity: 0;
+    filter: blur(4px);
+    transition:
+      opacity 800ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 800ms cubic-bezier(0.22, 1, 0.36, 1),
+      filter 800ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity, transform;
+  }
+
+  .scroll-reveal--up {
+    transform: translateY(44px);
+  }
+
+  .scroll-reveal--left {
+    transform: translateX(-44px);
+  }
+
+  .scroll-reveal--right {
+    transform: translateX(44px);
+  }
+
+  .scroll-reveal--scale {
+    transform: scale(0.96);
+  }
+
+  .scroll-reveal.is-visible {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+    will-change: auto;
+  }
+
+  .judicial-orbit {
+    position: absolute;
+    border: 1px solid rgb(217 188 118 / 18%);
+    border-radius: 9999px;
+  }
+
+  .judicial-orbit--one {
+    right: -18rem;
+    top: -23rem;
+    width: 50rem;
+    height: 50rem;
+  }
+
+  .judicial-orbit--two {
+    right: -6rem;
+    top: -11rem;
+    width: 27rem;
+    height: 27rem;
+  }
+
+  /* Keep the full editorial panel visible on short laptop displays. */
+  @media (min-width: 1024px) and (max-height: 760px) {
+    .editorial-hero {
+      min-height: 0;
+      max-height: calc(100dvh - 1.5rem);
+      padding-top: 1.75rem;
+      padding-bottom: 1.5rem;
+    }
+
+    .editorial-hero-grid {
+      gap: 2rem;
+    }
+
+    .editorial-hero-title {
+      font-size: clamp(3rem, 6vw, 5.35rem);
+    }
+
+    .editorial-hero-copy {
+      margin-top: 1.25rem;
+    }
+
+    .editorial-hero-trust {
+      margin-top: 1.75rem;
+      padding-top: 0.75rem;
+    }
+
+    .editorial-hero-trust .scroll-reveal {
+      padding-top: 0.5rem;
+      padding-bottom: 0.5rem;
+    }
+  }
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-up {
+      animation: none;
+    }
+
+    .scroll-reveal {
+      opacity: 1;
+      filter: none;
+      transform: none;
+      transition: none;
+    }
+  }
+}

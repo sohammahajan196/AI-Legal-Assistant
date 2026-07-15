@@ -32,8 +32,8 @@ describe("UserTypeSelector", () => {
   it("offers all supported user types", () => {
     render(<UserTypeSelector value="layperson" onChange={() => {}} />);
 
-    expect(screen.getByRole("option", { name: "Layperson" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Law student" })).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: "Lawyer" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Layperson" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Law student" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Lawyer" })).toBeInTheDocument();
   });
 });

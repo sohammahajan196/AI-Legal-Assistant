@@ -1,11 +1,37 @@
 /**
  * Root layout for the AI Legal Assistant chat UI.
- *
- * Intended to host the always-visible DisclaimerBanner alongside page
- * content. See STRUCTURE.md and TASKS.md T43/T45.
+ * Judicial Editorial: Cormorant Garamond + Manrope + IBM Plex Mono.
  */
 import "./globals.css";
 import type { Metadata } from "next";
+import {
+  Cormorant_Garamond,
+  IBM_Plex_Mono,
+  Manrope,
+} from "next/font/google";
+
+import { TooltipProvider } from "@/components/ui/tooltip";
+
+const cormorant = Cormorant_Garamond({
+  subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["400", "500", "600", "700"],
+  style: ["normal", "italic"],
+  display: "swap",
+});
+
+const manrope = Manrope({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  weight: ["400", "500", "600"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "AI Legal Assistant",
@@ -19,9 +45,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased">
-        {children}
+    <html
+      lang="en"
+      className={`${cormorant.variable} ${manrope.variable} ${plexMono.variable}`}
+    >
+      <body className="min-h-screen font-sans text-ink antialiased">
+        <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
       </body>
     </html>
   );
