@@ -245,7 +245,7 @@ export default function ChatWindow() {
         onConsentChange={setConsentToLog}
       />
 
-      <section id="legal-desk" className="pb-16 pt-6">
+      <section id="legal-desk" className="pb-4 pt-6">
         <div className="mb-6 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <h1 className="font-display text-2xl font-medium tracking-tight text-ink sm:text-[1.75rem]">
             Ask a legal question.
