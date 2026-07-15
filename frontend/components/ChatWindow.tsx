@@ -13,6 +13,7 @@ import MessageList, {
 } from "@/components/chat/MessageList";
 import CitationPanel from "@/components/CitationPanel";
 import AppShell from "@/components/layout/AppShell";
+import AppFooter from "@/components/layout/AppFooter";
 import ChatHeader from "@/components/layout/ChatHeader";
 import DisclaimerStrip, {
   DEFAULT_CONSENT_TO_LOG,
@@ -301,18 +302,7 @@ export default function ChatWindow() {
       </section>
 
       <ScrollReveal>
-        <footer className="grid gap-8 border-t border-ink/15 py-10 sm:grid-cols-2 sm:items-end">
-          <div>
-            <p className="font-display text-3xl font-semibold">Nyāya</p>
-            <p className="mt-2 max-w-sm text-sm leading-6 text-ink-muted">
-              Explainable legal research for Indian statute. Not a substitute
-              for licensed counsel.
-            </p>
-          </div>
-          <div className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-ink-muted sm:text-right">
-            Six legal domains · Primary-source citations · Honest uncertainty
-          </div>
-        </footer>
+        <AppFooter />
       </ScrollReveal>
 
       {lastOutgoingPayload ? (

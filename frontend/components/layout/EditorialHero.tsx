@@ -30,7 +30,10 @@ export default function EditorialHero() {
   }
 
   return (
-    <section className="editorial-hero relative isolate overflow-hidden rounded-[2rem] bg-ink px-5 py-14 text-[#fff9ef] sm:px-10 sm:py-16 lg:min-h-[30rem] lg:px-16 lg:py-16">
+    <section
+      id="method"
+      className="editorial-hero relative isolate scroll-mt-6 overflow-hidden rounded-[2rem] bg-ink px-5 py-14 text-[#fff9ef] sm:px-10 sm:py-16 lg:min-h-[30rem] lg:px-16 lg:py-16"
+    >
       <div className="judicial-orbit judicial-orbit--one" aria-hidden="true" />
       <div className="judicial-orbit judicial-orbit--two" aria-hidden="true" />
       <div className="absolute inset-y-0 right-[14%] hidden w-px bg-white/10 lg:block" />
