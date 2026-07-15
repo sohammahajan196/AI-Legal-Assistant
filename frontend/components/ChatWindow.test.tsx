@@ -159,8 +159,10 @@ describe("ChatWindow backend wiring", () => {
       expect(screen.getByText(SAMPLE_RESPONSE.answer)).toBeInTheDocument()
     );
 
-    expect(screen.getByText("Indian Penal Code")).toBeInTheDocument();
-    expect(screen.getByLabelText(/High confidence: 87%/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Indian Penal Code/).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByLabelText(/High confidence: 87%/i).length
+    ).toBeGreaterThan(0);
     expect(screen.getByText(SAMPLE_RESPONSE.disclaimer)).toBeInTheDocument();
   });
 
@@ -198,6 +200,22 @@ describe("ChatWindow backend wiring", () => {
       expect(screen.getByTestId("chat-error")).toHaveTextContent(
         "Backend unavailable"
       )
+    );
+  });
+
+  it("leaves the empty desk usable when history fails to load", async () => {
+    vi.mocked(fetchSessionHistory).mockRejectedValue(
+      new ApiClientError("Backend proxy is not configured", 503)
+    );
+
+    render(<ChatWindow />);
+
+    await waitFor(() =>
+      expect(screen.queryByText("Loading conversation...")).not.toBeInTheDocument()
+    );
+    expect(screen.getByTestId("empty-state")).toBeInTheDocument();
+    expect(screen.getByTestId("chat-error")).toHaveTextContent(
+      "Backend proxy is not configured"
     );
   });
 });

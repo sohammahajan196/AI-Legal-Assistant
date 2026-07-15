@@ -1,3 +1,208 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/**
+ * Minimal dark theme — graphite shell, muted cream panels.
+ * Quiet accents only; no marketing decoration.
+ */
+@layer base {
+  :root {
+    --background: 220 10% 8%;
+    --foreground: 40 20% 94%;
+
+    --card: 40 28% 94%;
+    --card-foreground: 220 12% 12%;
+
+    --popover: 40 28% 94%;
+    --popover-foreground: 220 12% 12%;
+
+    --primary: 36 28% 58%;
+    --primary-foreground: 220 12% 10%;
+
+    --secondary: 220 8% 16%;
+    --secondary-foreground: 40 18% 88%;
+
+    --muted: 220 8% 14%;
+    --muted-foreground: 220 6% 58%;
+
+    --accent: 40 20% 90%;
+    --accent-foreground: 220 12% 14%;
+
+    --destructive: 0 45% 42%;
+    --destructive-foreground: 40 30% 96%;
+
+    --border: 220 8% 20%;
+    --input: 40 18% 86%;
+    --ring: 36 28% 58%;
+
+    --radius: 0.75rem;
+
+    /* Brand surface tokens */
+    --bg-shell: #121418;
+    --bg-elevated: #1a1d23;
+    --bg-surface: #f3eee6;
+    --bg-surface-soft: #ebe5db;
+    --ink-primary: #e8e4dc;
+    --ink-muted: #9a968c;
+    --ink-on-cream: #1c1e22;
+    --ink-on-cream-muted: #5c5a54;
+    --accent-amber: #b8975a;
+    --accent-wine: #8b4a4f;
+    --border-subtle: #2a2e36;
+    --border-cream: #d9d2c6;
+    --disclaimer-bg: #1f2229;
+
+    --confidence-high-fg: #3d5c45;
+    --confidence-high-bg: #e4ebe5;
+    --confidence-mid-fg: #8a5a18;
+    --confidence-mid-bg: #efe6d4;
+    --confidence-low-fg: #7a3535;
+    --confidence-low-bg: #f0e4e4;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    background-color: var(--bg-shell);
+    color: var(--ink-primary);
+  }
+}
+
+@layer utilities {
+  /*
+   * Tailwind does not emit the nested `ink.cream` and hyphenated surface
+   * tokens reliably in this Next dev setup. Keep these critical contrast
+   * utilities explicit so cream panels never inherit the shell's light text.
+   */
+  .text-ink-cream {
+    color: var(--ink-on-cream);
+  }
+
+  .text-ink-cream-muted {
+    color: var(--ink-on-cream-muted);
+  }
+
+  .bg-surface-soft {
+    background-color: var(--bg-surface-soft);
+  }
+
+  .font-display {
+    font-family: var(--font-display), "Source Serif 4", "Iowan Old Style",
+      Georgia, serif;
+    font-weight: 500;
+  }
+
+  .font-mono {
+    font-family: var(--font-mono), ui-monospace, monospace;
+  }
+
+  .animate-fade-up {
+    animation: fade-up 0.4s ease-out both;
+  }
+
+  .scroll-reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition:
+      opacity 500ms ease-out,
+      transform 500ms ease-out;
+  }
+
+  .scroll-reveal--up {
+    transform: translateY(16px);
+  }
+
+  .scroll-reveal--left,
+  .scroll-reveal--right,
+  .scroll-reveal--scale {
+    transform: translateY(12px);
+  }
+
+  .scroll-reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Restrained 21st-style shader button */
+  .btn-shader {
+    position: relative;
+    overflow: hidden;
+    background:
+      linear-gradient(135deg, #c4a46a 0%, #9a7a42 48%, #b8975a 100%);
+    color: #14161a;
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 18%) inset,
+      0 8px 24px rgb(184 151 90 / 18%);
+    transition:
+      transform 200ms ease,
+      box-shadow 200ms ease,
+      filter 200ms ease;
+  }
+
+  .btn-shader::before {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    inset: -40% -20%;
+    background: linear-gradient(
+      115deg,
+      transparent 30%,
+      rgb(255 255 255 / 28%) 48%,
+      transparent 62%
+    );
+    transform: translateX(-40%);
+    transition: transform 600ms ease;
+  }
+
+  .btn-shader:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 22%) inset,
+      0 12px 28px rgb(184 151 90 / 24%);
+  }
+
+  .btn-shader:hover:not(:disabled)::before {
+    transform: translateX(40%);
+  }
+
+  .btn-shader:disabled {
+    opacity: 0.45;
+    box-shadow: none;
+  }
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-up {
+      animation: none;
+    }
+
+    .scroll-reveal {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+
+    .btn-shader::before {
+      display: none;
+    }
+  }
+}
