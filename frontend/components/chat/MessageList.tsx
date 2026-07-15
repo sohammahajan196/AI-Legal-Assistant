@@ -39,12 +39,12 @@ export default function MessageList({
   return (
     <div
       ref={listRef}
-      className="min-h-[28rem] space-y-5 rounded-2xl border border-[var(--border-cream)] bg-surface p-4 sm:min-h-[32rem] sm:p-6"
+      className="space-y-5 rounded-2xl border border-[var(--border-cream)] bg-surface p-4 sm:p-5"
       role="log"
       aria-label="Chat messages"
     >
       {isLoadingHistory ? (
-        <div className="space-y-3 py-6">
+        <div className="space-y-3 py-4">
           <Skeleton className="ml-auto h-14 w-2/3 bg-[var(--border-cream)]" />
           <Skeleton className="h-20 w-3/4 bg-[var(--border-cream)]" />
           <p className="text-center text-sm text-ink-cream-muted">
