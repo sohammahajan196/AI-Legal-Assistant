@@ -202,4 +202,20 @@ describe("ChatWindow backend wiring", () => {
       )
     );
   });
+
+  it("leaves the empty desk usable when history fails to load", async () => {
+    vi.mocked(fetchSessionHistory).mockRejectedValue(
+      new ApiClientError("Backend proxy is not configured", 503)
+    );
+
+    render(<ChatWindow />);
+
+    await waitFor(() =>
+      expect(screen.queryByText("Loading conversation...")).not.toBeInTheDocument()
+    );
+    expect(screen.getByTestId("empty-state")).toBeInTheDocument();
+    expect(screen.getByTestId("chat-error")).toHaveTextContent(
+      "Backend proxy is not configured"
+    );
+  });
 });

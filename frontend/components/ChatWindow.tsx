@@ -72,13 +72,10 @@ export default function ChatWindow() {
 
   useEffect(() => {
     let cancelled = false;
+    const activeSessionId = getOrCreateSessionId();
+    setSessionId(activeSessionId);
 
     async function loadSessionHistory() {
-      const activeSessionId = getOrCreateSessionId();
-      if (!cancelled) {
-        setSessionId(activeSessionId);
-      }
-
       try {
         const history = await fetchSessionHistory(activeSessionId);
         if (cancelled) {
@@ -109,15 +106,21 @@ export default function ChatWindow() {
           })
         );
       } catch (error) {
-        if (!cancelled) {
+        if (cancelled) {
+          return;
+        }
+        // New/unknown sessions and a down backend should not block the desk.
+        const status = error instanceof ApiClientError ? error.status : undefined;
+        if (status === 404) {
+          setMessages([]);
+        } else {
           const message =
             error instanceof ApiClientError
               ? error.message
               : "Unable to load previous messages.";
           setErrorMessage(message);
-          if (error instanceof ApiClientError) {
-            setErrorStatus(error.status);
-          }
+          setErrorStatus(status);
+          setMessages([]);
         }
       } finally {
         if (!cancelled) {
@@ -128,8 +131,16 @@ export default function ChatWindow() {
 
     void loadSessionHistory();
 
+    // Safety: never leave the UI stuck on the skeleton forever.
+    const safetyTimer = window.setTimeout(() => {
+      if (!cancelled) {
+        setIsLoadingHistory(false);
+      }
+    }, 6000);
+
     return () => {
       cancelled = true;
+      window.clearTimeout(safetyTimer);
     };
   }, []);
 

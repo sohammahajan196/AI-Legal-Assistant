@@ -77,6 +77,23 @@
 }
 
 @layer utilities {
+  /*
+   * Tailwind does not emit the nested `ink.cream` and hyphenated surface
+   * tokens reliably in this Next dev setup. Keep these critical contrast
+   * utilities explicit so cream panels never inherit the shell's light text.
+   */
+  .text-ink-cream {
+    color: var(--ink-on-cream);
+  }
+
+  .text-ink-cream-muted {
+    color: var(--ink-on-cream-muted);
+  }
+
+  .bg-surface-soft {
+    background-color: var(--bg-surface-soft);
+  }
+
   .font-display {
     font-family: var(--font-display), ui-serif, Georgia, serif;
   }

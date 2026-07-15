@@ -26,7 +26,7 @@ export default function EmptyState({ onSelectPrompt }: EmptyStateProps) {
             key={item.prompt}
             type="button"
             variant="outline"
-            className="h-auto min-h-[4.5rem] w-full whitespace-normal border-[var(--border-cream)] bg-surface-soft/60 px-4 py-3 text-left text-sm font-normal text-ink-cream shadow-none transition hover:border-amber/50 hover:bg-surface"
+            className="h-auto min-h-[4.5rem] w-full whitespace-normal border-[var(--border-cream)] bg-surface-soft px-4 py-3 text-left text-sm font-normal text-ink-cream shadow-none transition hover:border-amber/50 hover:bg-surface"
             onClick={() => onSelectPrompt(item.prompt)}
           >
             <span className="flex flex-col gap-1.5">

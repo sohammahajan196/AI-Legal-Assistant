@@ -58,7 +58,7 @@ export default function ChatComposer({
         onKeyDown={handleKeyDown}
         placeholder="Ask about Indian law..."
         disabled={disabled || isSending}
-        className="min-h-[72px] max-h-36 resize-none border-0 bg-transparent px-2 text-[0.95rem] leading-6 text-ink-cream shadow-none placeholder:text-ink-cream-muted/70 focus-visible:ring-0"
+        className="min-h-[72px] max-h-36 resize-none border-0 bg-transparent px-2 text-[0.95rem] leading-6 text-ink-cream shadow-none placeholder:text-[var(--ink-on-cream-muted)] focus-visible:ring-0"
       />
       <div className="mt-2 flex items-center justify-between border-t border-[var(--border-cream)] px-1 pt-3">
         <p className="hidden text-[0.68rem] text-ink-cream-muted sm:block">
