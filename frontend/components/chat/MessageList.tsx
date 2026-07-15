@@ -39,16 +39,15 @@ export default function MessageList({
   return (
     <div
       ref={listRef}
-      className="min-h-[42rem] space-y-6 rounded-[1.75rem] border border-warm bg-surface/75 p-4 shadow-[0_24px_70px_rgb(72_52_31/8%)] backdrop-blur-sm sm:p-7 lg:p-9"
+      className="min-h-[28rem] space-y-5 rounded-2xl border border-[var(--border-cream)] bg-surface p-4 sm:min-h-[32rem] sm:p-6"
       role="log"
       aria-label="Chat messages"
     >
       {isLoadingHistory ? (
         <div className="space-y-3 py-6">
-          <Skeleton className="ml-auto h-16 w-2/3" />
-          <Skeleton className="h-24 w-3/4" />
-          <Skeleton className="ml-auto h-12 w-1/2" />
-          <p className="text-center text-sm text-ink-muted">
+          <Skeleton className="ml-auto h-14 w-2/3 bg-[var(--border-cream)]" />
+          <Skeleton className="h-20 w-3/4 bg-[var(--border-cream)]" />
+          <p className="text-center text-sm text-ink-cream-muted">
             Loading conversation...
           </p>
         </div>
@@ -70,10 +69,10 @@ export default function MessageList({
           ))}
           {isSending ? (
             <div className="flex justify-start" aria-busy="true">
-              <div className="w-full max-w-[75%] space-y-2 rounded-2xl border border-warm bg-surface p-4">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-5/6" />
+              <div className="w-full max-w-[75%] space-y-2 rounded-2xl border border-[var(--border-cream)] bg-surface-soft p-4">
+                <Skeleton className="h-4 w-24 bg-[var(--border-cream)]" />
+                <Skeleton className="h-4 w-full bg-[var(--border-cream)]" />
+                <Skeleton className="h-4 w-5/6 bg-[var(--border-cream)]" />
               </div>
             </div>
           ) : null}

@@ -28,7 +28,7 @@ export default function ErrorAlert({
     <Alert
       variant="destructive"
       data-testid="chat-error"
-      className="mb-3 shrink-0 border-[#E0C8C8] bg-[var(--confidence-low-bg)] text-[var(--confidence-low-fg)]"
+      className="mb-4 border border-[var(--border-cream)] bg-[var(--confidence-low-bg)] text-[var(--confidence-low-fg)]"
     >
       <AlertCircle className="h-4 w-4" />
       <AlertTitle>{isRateLimited ? "Too many requests" : "Something went wrong"}</AlertTitle>

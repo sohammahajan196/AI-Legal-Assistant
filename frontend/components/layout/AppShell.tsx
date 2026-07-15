@@ -1,5 +1,5 @@
 /**
- * App shell — full-height parchment atmosphere for the chat UI.
+ * App shell — minimal dark graphite canvas.
  */
 import { cn } from "@/lib/utils";
 
@@ -12,7 +12,7 @@ export default function AppShell({ children, className }: AppShellProps) {
   return (
     <div
       className={cn(
-        "relative mx-auto min-h-screen w-full max-w-[96rem] px-3 py-3 sm:px-6 sm:py-5 lg:px-8",
+        "relative mx-auto min-h-screen w-full max-w-6xl px-4 py-4 sm:px-6 sm:py-5 lg:px-8",
         className
       )}
     >

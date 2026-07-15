@@ -1,59 +1,21 @@
-import { Landmark } from "lucide-react";
-
+/**
+ * Minimal site footer.
+ */
 export default function AppFooter() {
   return (
-    <footer className="border-t border-ink/15 py-10 sm:py-12">
-      <div className="grid gap-10 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
+    <footer className="mt-8 border-t border-[var(--border-subtle)] py-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <a
-            href="#top"
-            className="flex w-fit items-center gap-3"
-            aria-label="Back to top"
-          >
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-ink text-[#f5e8ca]">
-              <Landmark className="h-4 w-4" aria-hidden="true" />
-            </div>
-            <span className="font-display text-2xl font-semibold">Nyāya</span>
-          </a>
-          <p className="mt-4 max-w-sm text-sm leading-6 text-ink-muted">
-            Explainable legal research grounded in Indian statutory sources.
-            Built for clarity, verification, and honest uncertainty.
+          <p className="font-display text-lg font-semibold text-ink">Nyāya</p>
+          <p className="mt-1 max-w-md text-sm leading-6 text-ink-muted">
+            Citation-grounded answers for Indian statute. Not a substitute for
+            licensed counsel.
           </p>
         </div>
-
-        <div>
-          <p className="font-mono text-[0.58rem] font-semibold uppercase tracking-[0.2em] text-burgundy">
-            Explore
-          </p>
-          <nav className="mt-4 flex flex-col items-start gap-3" aria-label="Footer">
-            <a
-              href="#method"
-              className="text-sm text-ink-muted transition-colors hover:text-ink"
-            >
-              Our method
-            </a>
-            <a
-              href="#legal-desk"
-              className="text-sm text-ink-muted transition-colors hover:text-ink"
-            >
-              Research desk
-            </a>
-          </nav>
+        <div className="text-xs text-ink-muted sm:text-right">
+          <p>Criminal · Civil · Family · Labour · Consumer · Property</p>
+          <p className="mt-1">© 2026</p>
         </div>
-
-        <div>
-          <p className="font-mono text-[0.58rem] font-semibold uppercase tracking-[0.2em] text-burgundy">
-            Scope
-          </p>
-          <p className="mt-4 text-sm leading-6 text-ink-muted">
-            Criminal, civil, family, labour, consumer, and property law.
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-10 flex flex-col gap-3 border-t border-ink/10 pt-5 font-mono text-[0.56rem] uppercase tracking-[0.14em] text-ink-muted sm:flex-row sm:items-center sm:justify-between">
-        <p>© 2026 Nyāya · Indian Legal Assistant</p>
-        <p>Not legal advice · Consult licensed counsel</p>
       </div>
     </footer>
   );

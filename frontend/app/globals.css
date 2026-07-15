@@ -3,58 +3,62 @@
 @tailwind utilities;
 
 /**
- * Judicial Editorial design tokens.
- * Warm parchment / ink palette — not purple-gradient AI slop.
+ * Minimal dark theme — graphite shell, muted cream panels.
+ * Quiet accents only; no marketing decoration.
  */
 @layer base {
   :root {
-    --background: 40 33% 95%;
-    --foreground: 30 20% 10%;
+    --background: 220 10% 8%;
+    --foreground: 40 20% 94%;
 
-    --card: 40 50% 98%;
-    --card-foreground: 30 20% 10%;
+    --card: 40 28% 94%;
+    --card-foreground: 220 12% 12%;
 
-    --popover: 40 50% 98%;
-    --popover-foreground: 30 20% 10%;
+    --popover: 40 28% 94%;
+    --popover-foreground: 220 12% 12%;
 
-    --primary: 0 40% 31%;
-    --primary-foreground: 40 40% 97%;
+    --primary: 36 28% 58%;
+    --primary-foreground: 220 12% 10%;
 
-    --secondary: 38 28% 90%;
-    --secondary-foreground: 30 20% 18%;
+    --secondary: 220 8% 16%;
+    --secondary-foreground: 40 18% 88%;
 
-    --muted: 38 22% 90%;
-    --muted-foreground: 30 10% 36%;
+    --muted: 220 8% 14%;
+    --muted-foreground: 220 6% 58%;
 
-    --accent: 40 34% 88%;
-    --accent-foreground: 30 20% 14%;
+    --accent: 40 20% 90%;
+    --accent-foreground: 220 12% 14%;
 
-    --destructive: 0 45% 38%;
-    --destructive-foreground: 40 40% 97%;
+    --destructive: 0 45% 42%;
+    --destructive-foreground: 40 30% 96%;
 
-    --border: 38 28% 84%;
-    --input: 38 28% 84%;
-    --ring: 40 42% 42%;
+    --border: 220 8% 20%;
+    --input: 40 18% 86%;
+    --ring: 36 28% 58%;
 
-    --radius: 0.625rem;
+    --radius: 0.75rem;
 
-    /* Brand tokens (hex for non-HSL surfaces) */
-    --bg-parchment: #f4efe5;
-    --bg-surface: #fffaf2;
-    --ink-primary: #171914;
-    --ink-muted: #5e5b50;
-    --accent-burgundy: #712f38;
-    --accent-brass: #a77d2f;
-    --accent-forest: #163b32;
-    --border-warm: #d9cdbb;
-    --disclaimer-bg: #ece0cb;
+    /* Brand surface tokens */
+    --bg-shell: #121418;
+    --bg-elevated: #1a1d23;
+    --bg-surface: #f3eee6;
+    --bg-surface-soft: #ebe5db;
+    --ink-primary: #e8e4dc;
+    --ink-muted: #9a968c;
+    --ink-on-cream: #1c1e22;
+    --ink-on-cream-muted: #5c5a54;
+    --accent-amber: #b8975a;
+    --accent-wine: #8b4a4f;
+    --border-subtle: #2a2e36;
+    --border-cream: #d9d2c6;
+    --disclaimer-bg: #1f2229;
 
     --confidence-high-fg: #3d5c45;
-    --confidence-high-bg: #e8f0ea;
+    --confidence-high-bg: #e4ebe5;
     --confidence-mid-fg: #8a5a18;
-    --confidence-mid-bg: #f5ebd8;
+    --confidence-mid-bg: #efe6d4;
     --confidence-low-fg: #7a3535;
-    --confidence-low-bg: #f5e8e8;
+    --confidence-low-bg: #f0e4e4;
   }
 
   * {
@@ -67,24 +71,8 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    background-color: var(--bg-parchment);
+    background-color: var(--bg-shell);
     color: var(--ink-primary);
-    background-image:
-      radial-gradient(circle at 8% 4%, rgb(167 125 47 / 8%), transparent 24rem),
-      radial-gradient(circle at 92% 38%, rgb(113 47 56 / 6%), transparent 30rem);
-  }
-
-  /* Subtle paper grain — atmospheric, not decorative noise */
-  body::before {
-    content: "";
-    pointer-events: none;
-    position: fixed;
-    inset: 0;
-    z-index: 10;
-    opacity: 0.035;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    background-repeat: repeat;
-    background-size: 180px 180px;
   }
 }
 
@@ -98,98 +86,84 @@
   }
 
   .animate-fade-up {
-    animation: fade-up 0.45s ease-out both;
+    animation: fade-up 0.4s ease-out both;
   }
 
   .scroll-reveal {
     opacity: 0;
-    filter: blur(4px);
+    transform: translateY(16px);
     transition:
-      opacity 800ms cubic-bezier(0.22, 1, 0.36, 1),
-      transform 800ms cubic-bezier(0.22, 1, 0.36, 1),
-      filter 800ms cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: opacity, transform;
+      opacity 500ms ease-out,
+      transform 500ms ease-out;
   }
 
   .scroll-reveal--up {
-    transform: translateY(44px);
+    transform: translateY(16px);
   }
 
-  .scroll-reveal--left {
-    transform: translateX(-44px);
-  }
-
-  .scroll-reveal--right {
-    transform: translateX(44px);
-  }
-
+  .scroll-reveal--left,
+  .scroll-reveal--right,
   .scroll-reveal--scale {
-    transform: scale(0.96);
+    transform: translateY(12px);
   }
 
   .scroll-reveal.is-visible {
     opacity: 1;
-    filter: blur(0);
     transform: none;
-    will-change: auto;
   }
 
-  .judicial-orbit {
+  /* Restrained 21st-style shader button */
+  .btn-shader {
+    position: relative;
+    overflow: hidden;
+    background:
+      linear-gradient(135deg, #c4a46a 0%, #9a7a42 48%, #b8975a 100%);
+    color: #14161a;
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 18%) inset,
+      0 8px 24px rgb(184 151 90 / 18%);
+    transition:
+      transform 200ms ease,
+      box-shadow 200ms ease,
+      filter 200ms ease;
+  }
+
+  .btn-shader::before {
+    content: "";
+    pointer-events: none;
     position: absolute;
-    border: 1px solid rgb(217 188 118 / 18%);
-    border-radius: 9999px;
+    inset: -40% -20%;
+    background: linear-gradient(
+      115deg,
+      transparent 30%,
+      rgb(255 255 255 / 28%) 48%,
+      transparent 62%
+    );
+    transform: translateX(-40%);
+    transition: transform 600ms ease;
   }
 
-  .judicial-orbit--one {
-    right: -18rem;
-    top: -23rem;
-    width: 50rem;
-    height: 50rem;
+  .btn-shader:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 22%) inset,
+      0 12px 28px rgb(184 151 90 / 24%);
   }
 
-  .judicial-orbit--two {
-    right: -6rem;
-    top: -11rem;
-    width: 27rem;
-    height: 27rem;
+  .btn-shader:hover:not(:disabled)::before {
+    transform: translateX(40%);
   }
 
-  /* Keep the full editorial panel visible on short laptop displays. */
-  @media (min-width: 1024px) and (max-height: 760px) {
-    .editorial-hero {
-      min-height: 0;
-      max-height: calc(100dvh - 1.5rem);
-      padding-top: 1.75rem;
-      padding-bottom: 1.5rem;
-    }
-
-    .editorial-hero-grid {
-      gap: 2rem;
-    }
-
-    .editorial-hero-title {
-      font-size: clamp(3rem, 6vw, 5.35rem);
-    }
-
-    .editorial-hero-copy {
-      margin-top: 1.25rem;
-    }
-
-    .editorial-hero-trust {
-      margin-top: 1.75rem;
-      padding-top: 0.75rem;
-    }
-
-    .editorial-hero-trust .scroll-reveal {
-      padding-top: 0.5rem;
-      padding-bottom: 0.5rem;
-    }
+  .btn-shader:disabled {
+    opacity: 0.45;
+    box-shadow: none;
   }
 
   @keyframes fade-up {
     from {
       opacity: 0;
-      transform: translateY(8px);
+      transform: translateY(6px);
     }
     to {
       opacity: 1;
@@ -204,9 +178,12 @@
 
     .scroll-reveal {
       opacity: 1;
-      filter: none;
       transform: none;
       transition: none;
+    }
+
+    .btn-shader::before {
+      display: none;
     }
   }
 }

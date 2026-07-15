@@ -25,15 +25,15 @@ export const DOMAIN_LABELS: Record<LegalDomainValue, string> = {
   other: "Other",
 };
 
-/** Muted chip color classes per domain — warm editorial palette. */
+/** Flat, muted chip styles for cream panels. */
 export const DOMAIN_CHIP_STYLES: Record<LegalDomainValue, string> = {
-  criminal: "bg-[#F0E4E4] text-[#6E2F2F] border-[#E0C8C8]",
-  civil: "bg-[#E8EAF0] text-[#3A4560] border-[#C8CFE0]",
-  family: "bg-[#F0E8F0] text-[#5C3A5C] border-[#D8C8D8]",
-  labour: "bg-[#E8F0EB] text-[#3D5C45] border-[#C8D8CE]",
-  consumer: "bg-[#F5EBD8] text-[#8A5A18] border-[#E5D5B0]",
-  property: "bg-[#EDE8E0] text-[#5C5348] border-[#D8D0C0]",
-  other: "bg-muted text-muted-foreground border-border",
+  criminal: "bg-[#efe6e6] text-[#5e3538] border-[#e0d2d2]",
+  civil: "bg-[#e7e9ee] text-[#3a4154] border-[#d0d4de]",
+  family: "bg-[#ece7ec] text-[#4f3c4f] border-[#d8d0d8]",
+  labour: "bg-[#e6ece8] text-[#355040] border-[#cfd8d2]",
+  consumer: "bg-[#efe8da] text-[#6f5528] border-[#e0d6c0]",
+  property: "bg-[#ebe7e1] text-[#4f4c46] border-[#d8d2ca]",
+  other: "bg-[#e8e4de] text-[#5c5a54] border-[#d9d2c6]",
 };
 
 export function getDomainLabel(domain: string): string {

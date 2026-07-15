@@ -1,5 +1,5 @@
 /**
- * Chat composer — textarea + send, Enter to send / Shift+Enter newline.
+ * Chat composer — textarea + shader send button.
  */
 "use client";
 
@@ -45,7 +45,7 @@ export default function ChatComposer({
   return (
     <form
       onSubmit={handleSubmit}
-      className="sticky bottom-4 z-20 mx-2 mt-5 rounded-[1.4rem] border border-warm bg-surface/95 p-3 shadow-[0_20px_60px_rgb(48_35_24/18%)] backdrop-blur-xl sm:mx-5 sm:p-4"
+      className="sticky bottom-4 z-20 mt-4 rounded-2xl border border-[var(--border-cream)] bg-surface p-3 shadow-[0_16px_40px_rgb(0_0_0/28%)] sm:p-4"
     >
       <label htmlFor="chat-input" className="sr-only">
         Your message
@@ -58,19 +58,21 @@ export default function ChatComposer({
         onKeyDown={handleKeyDown}
         placeholder="Ask about Indian law..."
         disabled={disabled || isSending}
-        className="min-h-[78px] max-h-40 resize-none border-0 bg-transparent px-2 text-[0.95rem] leading-6 text-ink shadow-none placeholder:text-ink-muted/70 focus-visible:ring-0"
+        className="min-h-[72px] max-h-36 resize-none border-0 bg-transparent px-2 text-[0.95rem] leading-6 text-ink-cream shadow-none placeholder:text-ink-cream-muted/70 focus-visible:ring-0"
       />
-      <div className="mt-2 flex items-center justify-between border-t border-warm px-1 pt-3">
-        <p className="hidden font-mono text-[0.58rem] uppercase tracking-[0.15em] text-ink-muted sm:block">
-          Enter to send · Shift + Enter for a new line
+      <div className="mt-2 flex items-center justify-between border-t border-[var(--border-cream)] px-1 pt-3">
+        <p className="hidden text-[0.68rem] text-ink-cream-muted sm:block">
+          Enter to send · Shift + Enter for newline
         </p>
         <Button
           type="submit"
           disabled={!canSend}
-          className="ml-auto min-h-11 rounded-full bg-burgundy px-5 shadow-[0_8px_20px_rgb(113_47_56/20%)] hover:-translate-y-0.5 hover:bg-burgundy/90"
+          className="btn-shader ml-auto min-h-10 rounded-full border-0 px-5 font-medium"
         >
-          <Send className="h-4 w-4" aria-hidden="true" />
-          <span>{isSending ? "Sending..." : "Send"}</span>
+          <Send className="relative z-[1] h-4 w-4" aria-hidden="true" />
+          <span className="relative z-[1]">
+            {isSending ? "Sending..." : "Send"}
+          </span>
         </Button>
       </div>
     </form>

@@ -33,14 +33,12 @@ export default function SourcesAccordion({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls={panelId}
-        className="flex min-h-11 w-full items-center justify-between rounded-lg border border-warm bg-parchment px-3 py-2 text-sm font-semibold text-ink transition hover:bg-accent"
+        className="flex min-h-10 w-full items-center justify-between rounded-lg border border-[var(--border-cream)] bg-surface px-3 py-2 text-sm font-medium text-ink-cream transition hover:bg-surface-soft"
       >
-        <span>
-          Sources ({citations.length})
-        </span>
+        <span>Sources ({citations.length})</span>
         <ChevronDown
           className={cn(
-            "h-4 w-4 text-brass transition-transform",
+            "h-4 w-4 text-ink-cream-muted transition-transform",
             open && "rotate-180"
           )}
           aria-hidden="true"

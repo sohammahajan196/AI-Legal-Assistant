@@ -1,6 +1,5 @@
 /**
- * Tailwind CSS configuration — Judicial Editorial theme.
- * See TASKS.md T41 and frontend UI plan.
+ * Tailwind CSS configuration — minimal dark graphite theme.
  */
 import type { Config } from "tailwindcss";
 
@@ -48,15 +47,23 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        parchment: "var(--bg-parchment)",
+        shell: "var(--bg-shell)",
+        elevated: "var(--bg-elevated)",
         surface: "var(--bg-surface)",
+        "surface-soft": "var(--bg-surface-soft)",
         ink: {
           DEFAULT: "var(--ink-primary)",
           muted: "var(--ink-muted)",
+          cream: "var(--ink-on-cream)",
+          "cream-muted": "var(--ink-on-cream-muted)",
         },
-        burgundy: "var(--accent-burgundy)",
-        brass: "var(--accent-brass)",
-        warm: "var(--border-warm)",
+        amber: "var(--accent-amber)",
+        wine: "var(--accent-wine)",
+        /* Back-compat aliases used across older component classes */
+        burgundy: "var(--accent-wine)",
+        brass: "var(--accent-amber)",
+        warm: "var(--border-cream)",
+        parchment: "var(--bg-shell)",
         disclaimer: "var(--disclaimer-bg)",
       },
       borderRadius: {

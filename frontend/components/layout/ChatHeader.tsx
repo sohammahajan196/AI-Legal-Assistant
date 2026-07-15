@@ -1,10 +1,10 @@
 /**
- * Chat header — Fraunces wordmark + user type selector.
+ * Minimal product header — brand + audience selector.
  */
 import UserTypeSelector, {
   type UserType,
 } from "@/components/UserTypeSelector";
-import { ArrowDownRight, Landmark } from "lucide-react";
+import { Landmark } from "lucide-react";
 
 export interface ChatHeaderProps {
   userType: UserType;
@@ -16,57 +16,30 @@ export default function ChatHeader({
   onUserTypeChange,
 }: ChatHeaderProps) {
   return (
-    <header id="top" className="scroll-mt-4 border-b border-ink/15">
-      <div className="flex min-h-[5.5rem] flex-col gap-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <header
+      id="top"
+      className="scroll-mt-4 border-b border-[var(--border-subtle)]"
+    >
+      <div className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
         <a
           href="#top"
-          className="group flex w-fit items-center gap-3"
+          className="flex w-fit items-center gap-3"
           aria-label="Nyāya home"
         >
-          <div className="flex h-11 w-11 items-center justify-center rounded-full border border-ink/20 bg-ink text-[#f5e8ca] shadow-[0_8px_24px_rgb(23_25_20/12%)] transition-transform duration-300 group-hover:-translate-y-0.5">
-            <Landmark className="h-5 w-5" aria-hidden="true" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-subtle)] bg-elevated text-amber">
+            <Landmark className="h-4 w-4" aria-hidden="true" />
           </div>
           <div>
-            <p className="font-display text-2xl font-semibold leading-none tracking-[-0.02em] text-ink">
+            <p className="font-display text-xl font-semibold leading-none tracking-tight text-ink">
               Nyāya
             </p>
-            <p className="mt-1 font-mono text-[0.58rem] uppercase tracking-[0.2em] text-ink-muted">
-              Indian legal intelligence
+            <p className="mt-1 text-[0.68rem] text-ink-muted">
+              Indian statute assistant
             </p>
           </div>
         </a>
 
-        <nav
-          className="hidden items-center gap-7 md:flex"
-          aria-label="Primary navigation"
-        >
-          <a
-            href="#method"
-            className="font-mono text-[0.62rem] font-medium uppercase tracking-[0.16em] text-ink-muted transition-colors hover:text-burgundy"
-          >
-            Method
-          </a>
-          <a
-            href="#legal-desk"
-            className="font-mono text-[0.62rem] font-medium uppercase tracking-[0.16em] text-ink-muted transition-colors hover:text-burgundy"
-          >
-            Research desk
-          </a>
-          <a
-            href="#legal-desk"
-            className="group inline-flex items-center gap-2 rounded-full border border-ink/20 px-4 py-2.5 font-mono text-[0.62rem] font-semibold uppercase tracking-[0.14em] text-ink transition hover:border-burgundy hover:bg-burgundy hover:text-white"
-          >
-            Ask Nyāya
-            <ArrowDownRight
-              className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:translate-y-0.5"
-              aria-hidden="true"
-            />
-          </a>
-        </nav>
-
-        <div className="flex items-center gap-5">
-          <UserTypeSelector value={userType} onChange={onUserTypeChange} />
-        </div>
+        <UserTypeSelector value={userType} onChange={onUserTypeChange} />
       </div>
     </header>
   );

@@ -79,7 +79,7 @@ export default function ConfidenceBadge({
       </span>
       {showMeter ? (
         <div
-          className="h-1 w-full min-w-[8rem] overflow-hidden rounded-full bg-warm"
+          className="h-1 w-full min-w-[8rem] overflow-hidden rounded-full bg-[var(--border-cream)]"
           role="presentation"
           aria-hidden="true"
         >

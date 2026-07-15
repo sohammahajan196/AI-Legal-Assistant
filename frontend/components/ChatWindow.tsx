@@ -1,6 +1,6 @@
 /**
- * Top-level chat container — state orchestration for the Judicial Editorial UI.
- * See TASKS.md T43/T45/T46/T47 and the frontend UI plan.
+ * Top-level chat container — minimal dark chat-first UI.
+ * See TASKS.md T43/T45/T46/T47.
  */
 "use client";
 
@@ -18,8 +18,6 @@ import ChatHeader from "@/components/layout/ChatHeader";
 import DisclaimerStrip, {
   DEFAULT_CONSENT_TO_LOG,
 } from "@/components/layout/DisclaimerStrip";
-import EditorialHero from "@/components/layout/EditorialHero";
-import ScrollReveal from "@/components/motion/ScrollReveal";
 import {
   DEFAULT_USER_TYPE,
   type UserType,
@@ -210,7 +208,6 @@ export default function ChatWindow() {
     if (!lastOutgoingPayload || !sessionId || isSending) {
       return;
     }
-    // Remove the failed trailing user message if present, then resend.
     setMessages((current) => {
       const last = current[current.length - 1];
       if (last?.role === "user" && last.content === lastOutgoingPayload.query) {
@@ -237,31 +234,15 @@ export default function ChatWindow() {
         onConsentChange={setConsentToLog}
       />
 
-      <EditorialHero />
-
-      <section id="legal-desk" className="scroll-mt-8 pb-24 pt-24 lg:pt-32">
-        <ScrollReveal className="mb-12 grid gap-8 lg:grid-cols-[0.75fr_1.25fr] lg:items-end">
-          <div>
-            <p className="font-mono text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-burgundy">
-              The legal research desk
-            </p>
-            <p className="mt-3 font-mono text-[0.62rem] uppercase tracking-[0.16em] text-ink-muted">
-              Session · Private workspace
-            </p>
-          </div>
-          <div>
-            <h2 className="font-display max-w-4xl text-[clamp(3rem,6vw,6.5rem)] font-medium leading-[0.88] tracking-[-0.04em] text-ink">
-              Ask plainly.
-              <span className="block italic text-burgundy">
-                Read critically.
-              </span>
-            </h2>
-            <p className="mt-6 max-w-2xl text-base leading-7 text-ink-muted">
-              Your answer and its evidence stay side by side. The conversation
-              explains the law; the source ledger lets you verify it.
-            </p>
-          </div>
-        </ScrollReveal>
+      <section id="legal-desk" className="pb-16 pt-6">
+        <div className="mb-6 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <h1 className="font-display text-2xl font-medium tracking-tight text-ink sm:text-[1.75rem]">
+            Ask a legal question.
+          </h1>
+          <p className="text-sm text-ink-muted">
+            Answers include citations, confidence, and source excerpts.
+          </p>
+        </div>
 
         {errorMessage ? (
           <ErrorAlert
@@ -271,8 +252,8 @@ export default function ChatWindow() {
           />
         ) : null}
 
-        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
-          <ScrollReveal direction="left" className="min-w-0">
+        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+          <div className="min-w-0">
             <MessageList
               messages={messages}
               isLoadingHistory={isLoadingHistory}
@@ -288,22 +269,18 @@ export default function ChatWindow() {
               disabled={isLoadingHistory || !sessionId}
               isSending={isSending}
             />
-          </ScrollReveal>
+          </div>
 
-          <ScrollReveal direction="right" delay={100} className="h-full">
-            <CitationPanel
-              citations={panelCitations}
-              confidenceScore={activeAssistant?.confidenceScore}
-              legalDomain={activeAssistant?.legalDomain}
-              isRefusal={activeAssistant?.isRefusal}
-            />
-          </ScrollReveal>
+          <CitationPanel
+            citations={panelCitations}
+            confidenceScore={activeAssistant?.confidenceScore}
+            legalDomain={activeAssistant?.legalDomain}
+            isRefusal={activeAssistant?.isRefusal}
+          />
         </div>
       </section>
 
-      <ScrollReveal>
-        <AppFooter />
-      </ScrollReveal>
+      <AppFooter />
 
       {lastOutgoingPayload ? (
         <output

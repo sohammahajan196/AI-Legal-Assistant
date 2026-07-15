@@ -1,6 +1,6 @@
 /**
- * Root layout for the AI Legal Assistant chat UI.
- * Judicial Editorial: Cormorant Garamond + Manrope + IBM Plex Mono.
+ * Root layout — Manrope + IBM Plex Mono for a quiet product feel.
+ * Display font kept for titles only.
  */
 import "./globals.css";
 import type { Metadata } from "next";
@@ -29,12 +29,12 @@ const manrope = Manrope({
 const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
-  weight: ["400", "500", "600"],
+  weight: ["400", "500"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "AI Legal Assistant",
+  title: "Nyāya — AI Legal Assistant",
   description:
     "Explainable, citation-grounded answers to Indian legal questions.",
 };
@@ -49,7 +49,7 @@ export default function RootLayout({
       lang="en"
       className={`${cormorant.variable} ${manrope.variable} ${plexMono.variable}`}
     >
-      <body className="min-h-screen font-sans text-ink antialiased">
+      <body className="min-h-screen bg-shell font-sans text-ink antialiased">
         <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
       </body>
     </html>

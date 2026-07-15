@@ -16,7 +16,7 @@ exports[`ConfidenceBadge > matches snapshot for a high-confidence score 1`] = `
   </span>
   <div
     aria-hidden="true"
-    class="h-1 w-full min-w-[8rem] overflow-hidden rounded-full bg-warm"
+    class="h-1 w-full min-w-[8rem] overflow-hidden rounded-full bg-[var(--border-cream)]"
     role="presentation"
   >
     <div

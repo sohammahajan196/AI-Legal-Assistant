@@ -1,5 +1,5 @@
 /**
- * Groups citations for the desktop side panel.
+ * Desktop source panel — cream panel on graphite shell.
  */
 import CitationCard from "@/components/CitationCard";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
@@ -23,22 +23,22 @@ export default function CitationPanel({
 }: CitationPanelProps) {
   return (
     <aside
-      className="sticky top-28 hidden h-[calc(100vh-8rem)] min-h-[34rem] w-full max-w-[400px] shrink-0 flex-col self-start overflow-hidden rounded-[1.75rem] border border-warm bg-[#171914] text-[#fff9ef] shadow-[0_24px_70px_rgb(23_25_20/18%)] xl:flex"
+      className="sticky top-6 hidden h-[calc(100vh-7rem)] min-h-[28rem] w-full max-w-[360px] shrink-0 flex-col self-start overflow-hidden rounded-2xl border border-[var(--border-cream)] bg-surface xl:flex"
       aria-label="Source citations"
       data-testid="citation-panel"
     >
-      <div className="shrink-0 border-b border-white/15 px-6 py-6">
-        <p className="font-mono text-[0.62rem] font-semibold uppercase tracking-[0.2em] text-[#d9bc76]">
-          Evidence ledger
+      <div className="shrink-0 border-b border-[var(--border-cream)] px-5 py-4">
+        <p className="text-[0.62rem] font-medium uppercase tracking-[0.14em] text-ink-cream-muted">
+          Sources
         </p>
-        <h2 className="font-display mt-2 text-3xl font-medium text-[#fff9ef]">
-          Source record
+        <h2 className="mt-1 font-display text-xl font-medium text-ink-cream">
+          Citations
         </h2>
         {(legalDomain || typeof confidenceScore === "number" || isRefusal) && (
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {legalDomain ? <DomainBadge domain={legalDomain} /> : null}
             {isRefusal ? (
-              <span className="rounded-md border border-[#E0C8C8] bg-[var(--confidence-low-bg)] px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--confidence-low-fg)]">
+              <span className="rounded-md border border-[var(--border-cream)] bg-[var(--confidence-low-bg)] px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-wide text-[var(--confidence-low-fg)]">
                 Refusal
               </span>
             ) : null}
@@ -53,13 +53,9 @@ export default function CitationPanel({
       </div>
 
       {citations.length === 0 ? (
-        <div className="flex flex-1 flex-col justify-end px-7 py-9">
-          <p className="font-display text-3xl italic leading-tight text-[#d9bc76]">
-            Sources will appear here after you ask a question.
-          </p>
-          <p className="mt-5 max-w-xs text-sm leading-6 text-[#bcb0a2]">
-            Each cited section is preserved with its statutory excerpt and
-            retrieval relevance.
+        <div className="flex flex-1 items-center px-5 py-8">
+          <p className="text-sm leading-6 text-ink-cream-muted">
+            Sources appear here after you ask a question.
           </p>
         </div>
       ) : (
@@ -76,7 +72,7 @@ export default function CitationPanel({
                   domain={citation.domain}
                 />
                 {index < citations.length - 1 ? (
-                  <Separator className="my-3 bg-warm" />
+                  <Separator className="my-3 bg-[var(--border-cream)]" />
                 ) : null}
               </div>
             ))}

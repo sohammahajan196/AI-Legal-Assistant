@@ -1,6 +1,5 @@
 /**
  * Routes user vs assistant chat messages.
- * See TASKS.md T43/T47.
  */
 import AssistantMessage from "@/components/chat/AssistantMessage";
 import type { SourceCitation } from "@/lib/types";
@@ -29,7 +28,7 @@ export default function MessageBubble({
   if (isUser) {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-2xl rounded-tr-sm bg-burgundy px-4 py-3 text-sm leading-relaxed text-primary-foreground sm:max-w-[75%] sm:text-base">
+        <div className="max-w-[85%] rounded-2xl rounded-tr-md bg-elevated px-4 py-3 text-sm leading-relaxed text-ink sm:max-w-[75%] sm:text-[0.95rem]">
           <p className="whitespace-pre-wrap break-words">{content}</p>
         </div>
       </div>

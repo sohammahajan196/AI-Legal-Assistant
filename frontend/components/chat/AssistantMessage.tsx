@@ -1,5 +1,5 @@
 /**
- * Assistant answer with metadata row, refusal block, disclaimer, sources.
+ * Assistant answer with metadata, refusal, disclaimer, sources.
  */
 import ConfidenceBadge from "@/components/ConfidenceBadge";
 import DomainBadge from "@/components/DomainBadge";
@@ -27,12 +27,12 @@ export default function AssistantMessage({
   const hasTrustMeta = typeof confidenceScore === "number";
 
   return (
-    <div className="max-w-[92%] rounded-2xl rounded-tl-sm border border-warm bg-surface px-4 py-3 text-sm leading-relaxed text-ink shadow-sm animate-fade-up sm:max-w-[85%] sm:text-base">
+    <div className="max-w-[92%] rounded-2xl rounded-tl-md border border-[var(--border-cream)] bg-surface-soft px-4 py-3 text-sm leading-relaxed text-ink-cream animate-fade-up sm:max-w-[88%] sm:text-[0.95rem]">
       {hasTrustMeta || legalDomain || isRefusal ? (
         <div className="mb-3 flex flex-wrap items-center gap-2">
           {legalDomain ? <DomainBadge domain={legalDomain} /> : null}
           {isRefusal ? (
-            <span className="rounded-md border border-[#E0C8C8] bg-[var(--confidence-low-bg)] px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-[var(--confidence-low-fg)]">
+            <span className="rounded-md border border-[var(--border-cream)] bg-[var(--confidence-low-bg)] px-2 py-0.5 text-[0.65rem] font-medium uppercase tracking-wide text-[var(--confidence-low-fg)]">
               Refusal
             </span>
           ) : null}
@@ -41,7 +41,7 @@ export default function AssistantMessage({
           ) : null}
         </div>
       ) : (
-        <p className="mb-3 text-xs italic text-ink-muted">
+        <p className="mb-3 text-xs text-ink-cream-muted">
           Source details unavailable for earlier messages.
         </p>
       )}
@@ -55,7 +55,7 @@ export default function AssistantMessage({
       ) : null}
 
       {disclaimer ? (
-        <p className="mt-3 border-t border-warm pt-3 text-xs italic leading-relaxed text-ink-muted">
+        <p className="mt-3 border-t border-[var(--border-cream)] pt-3 text-xs leading-relaxed text-ink-cream-muted">
           {disclaimer}
         </p>
       ) : null}
