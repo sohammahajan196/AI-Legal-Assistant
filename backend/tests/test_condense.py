@@ -78,6 +78,24 @@ async def test_result_is_stripped_of_surrounding_whitespace():
     assert result == "What if it's a repeat offense of theft?"
 
 
+@pytest.mark.asyncio
+async def test_list_content_blocks_from_gemini_are_normalized_to_text():
+    """Gemini 3.x may return content as a list of blocks, not a bare string."""
+    mock_llm = MagicMock()
+    mock_llm.ainvoke = AsyncMock(
+        return_value=AIMessage(
+            content=[
+                {"type": "text", "text": "What is the penalty for a "},
+                {"type": "text", "text": "repeat offense of theft?"},
+            ]
+        )
+    )
+
+    result = await condense_question(mock_llm, "What if it's a repeat offense?", THEFT_HISTORY)
+
+    assert result == "What is the penalty for a repeat offense of theft?"
+
+
 # --- function is async and awaitable -----------------------------------------
 
 

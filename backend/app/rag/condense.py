@@ -33,6 +33,34 @@ def _format_history(history: list[dict]) -> str:
     return "\n".join(f"{turn['role']}: {turn['content']}" for turn in history)
 
 
+def _message_text(content: object) -> str:
+    """Normalize LangChain / Gemini message content to a plain string.
+
+    Gemini 3.x may return ``content`` as a list of blocks (e.g. ``[{"type":
+    "text", "text": "..."}]``) instead of a bare string. Callers that only
+    handle ``str`` then crash on ``.strip()``.
+    """
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content.strip()
+    if isinstance(content, list):
+        parts: list[str] = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict):
+                text = block.get("text")
+                if isinstance(text, str):
+                    parts.append(text)
+            else:
+                text = getattr(block, "text", None)
+                if isinstance(text, str):
+                    parts.append(text)
+        return "".join(parts).strip()
+    return str(content).strip()
+
+
 async def condense_question(llm, question: str, history: list[dict]) -> str:
     """Rewrite `question` into a standalone query given prior session history.
 
@@ -46,4 +74,5 @@ async def condense_question(llm, question: str, history: list[dict]) -> str:
 
     messages = _CONDENSE_PROMPT.format_messages(history=_format_history(history), question=question)
     response = await llm.ainvoke(messages)
-    return response.content.strip()
+    rewritten = _message_text(response.content)
+    return rewritten or question
