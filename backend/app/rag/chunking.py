@@ -84,7 +84,6 @@ def _extract_chapter_markers(text: str) -> list[tuple[int, str]]:
         match = CHAPTER_RE.match(line.strip())
         if match:
             label = f"CHAPTER {match.group(1).strip()}"
-            line_len = len(line)
             next_idx = idx + 1
             if next_idx < len(lines):
                 next_stripped = lines[next_idx].strip()

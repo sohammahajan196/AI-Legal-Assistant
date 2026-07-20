@@ -13,6 +13,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from app.core.config import settings
+from app.core.logging import logger
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -59,12 +60,14 @@ async def verify_bearer_token(
     not present in the configured mapping.
     """
     if credentials is None:
+        logger.error("Authentication failed: Missing bearer token")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing bearer token",
         )
 
     if credentials.scheme.lower() != "bearer":
+        logger.error("Authentication failed: Invalid authorization scheme")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authorization scheme; Bearer token required",
@@ -72,6 +75,7 @@ async def verify_bearer_token(
 
     token = credentials.credentials
     if token not in get_token_tier_mapping():
+        logger.error("Authentication failed: Invalid bearer token")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid bearer token",

@@ -14,6 +14,7 @@ from app.rag.bm25_index import (
     query_bm25_index,
 )
 from app.rag.chunking import LegalChunk
+from app.rag.exceptions import RetrievalIndexNotFoundError
 
 
 @pytest.fixture
@@ -132,8 +133,11 @@ def test_query_with_domain_filter_excludes_other_domains(
 def test_load_bm25_index_missing_file_raises(
     tmp_path: Path,
 ):
-    with pytest.raises(FileNotFoundError, match="BM25 index not found"):
+    with pytest.raises(RetrievalIndexNotFoundError, match="BM25 index not found") as exc_info:
         load_bm25_index(str(tmp_path / "missing"))
+
+    assert "build_index.py" in str(exc_info.value)
+    assert isinstance(exc_info.value, FileNotFoundError)
 
 
 def test_query_bm25_index_rejects_invalid_k(

@@ -7,33 +7,31 @@ pydantic==2.13.4
 pydantic-settings==2.14.2
 
 # RAG orchestration
-langchain-classic
-langchain-community
-langchain-google-genai
-langchain-huggingface
+langchain-classic==1.0.8
+langchain-community==0.4.2
+langchain-google-genai==4.2.7
+langchain-huggingface==1.2.2
 
 # Retrieval
-faiss-cpu
-rank-bm25
-sentence-transformers
+faiss-cpu==1.14.3
+rank-bm25==0.2.2
+sentence-transformers==5.6.0
 
 # Storage / caching / rate limiting
-sqlalchemy
-redis
-slowapi
+sqlalchemy==2.0.51
+redis==8.0.1
+slowapi==0.1.10
 
 # Utilities
 python-dotenv==1.2.2
 httpx==0.28.1
-pdfplumber
+pdfplumber==0.11.10
 
 # Testing
 pytest==9.1.1
 pytest-asyncio==1.4.0
-fakeredis
+fakeredis==2.36.2
 
-# NOTE (T02/T04): fastapi/uvicorn/pydantic/pydantic-settings/httpx/pytest/pytest-asyncio
-# are pinned to the versions verified to boot the app + run tests in a fresh
-# virtualenv (see README). Remaining deps (langchain*, faiss-cpu, sentence-transformers,
-# sqlalchemy, redis, slowapi, fakeredis) are introduced by later tasks and will be
-# pinned via `pip freeze` when those tasks first install/verify them.
+# All runtime/test deps above are pinned to versions verified in the project
+# virtualenv (boot + pytest). Bump intentionally and re-run the suite / smoke
+# chat before merging.

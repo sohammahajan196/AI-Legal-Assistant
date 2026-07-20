@@ -14,6 +14,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 
 from app.rag.chunking import LegalChunk
+from app.rag.exceptions import RetrievalIndexNotFoundError
 
 # Files written by ``FAISS.save_local`` (used by tests and manual checks).
 FAISS_INDEX_FILE = "index.faiss"
@@ -114,9 +115,10 @@ def load_faiss_index(persist_dir: str, embedding_model):
     docstore_path = persist_path / FAISS_DOCSTORE_FILE
 
     if not index_path.is_file() or not docstore_path.is_file():
-        raise FileNotFoundError(
-            f"FAISS index not found at {persist_dir!r} "
-            f"(expected {FAISS_INDEX_FILE!r} and {FAISS_DOCSTORE_FILE!r})"
+        raise RetrievalIndexNotFoundError(
+            "FAISS",
+            persist_dir,
+            f"{FAISS_INDEX_FILE!r} and {FAISS_DOCSTORE_FILE!r}",
         )
 
     return FAISS.load_local(

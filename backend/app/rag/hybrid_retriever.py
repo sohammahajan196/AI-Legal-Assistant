@@ -15,6 +15,7 @@ from langchain_classic.retrievers import EnsembleRetriever
 from langchain_core.retrievers import BaseRetriever
 
 from app.core.config import settings
+from app.core.logging import logger
 from app.rag.bm25_index import Bm25QueryResult, query_bm25_index
 from app.rag.vectorstore import FaissQueryResult, query_faiss_index
 
@@ -115,39 +116,46 @@ def query_hybrid_index(
     if k < 1:
         raise ValueError("k must be at least 1")
 
-    resolved_weights = weights or (settings.hybrid_semantic_weight, settings.hybrid_keyword_weight)
-    fetch_k = max(k * 3, settings.retrieval_top_k)
+    logger.info("Vector search started")
+    try:
+        resolved_weights = weights or (settings.hybrid_semantic_weight, settings.hybrid_keyword_weight)
+        fetch_k = max(k * 3, settings.retrieval_top_k)
 
-    faiss_hits = query_faiss_index(faiss_index, query, k=fetch_k, domain=domain)
-    bm25_hits = query_bm25_index(bm25_index, query, k=fetch_k, domain=domain)
+        faiss_hits = query_faiss_index(faiss_index, query, k=fetch_k, domain=domain)
+        bm25_hits = query_bm25_index(bm25_index, query, k=fetch_k, domain=domain)
 
-    hits_by_citation: dict[str, _QueryHit] = {}
-    for hit in (*faiss_hits, *bm25_hits):
-        hits_by_citation.setdefault(hit.source_citation, hit)
+        hits_by_citation: dict[str, _QueryHit] = {}
+        all_hits: list[_QueryHit] = [*faiss_hits, *bm25_hits]
+        for hit in all_hits:
+            hits_by_citation.setdefault(hit.source_citation, hit)
 
-    rrf_scores = _weighted_reciprocal_rank_scores(
-        [
-            [hit.source_citation for hit in faiss_hits],
-            [hit.source_citation for hit in bm25_hits],
-        ],
-        resolved_weights,
-    )
-
-    fused_ids = sorted(hits_by_citation, key=lambda cid: rrf_scores[cid], reverse=True)
-    normalized_scores = normalize_scores([rrf_scores[cid] for cid in fused_ids])
-
-    results = [
-        HybridQueryResult(
-            text=hits_by_citation[citation_id].text,
-            score=score,
-            domain=hits_by_citation[citation_id].domain,
-            act_name=hits_by_citation[citation_id].act_name,
-            act_year=hits_by_citation[citation_id].act_year,
-            chapter=hits_by_citation[citation_id].chapter,
-            section_number=hits_by_citation[citation_id].section_number,
-            section_title=hits_by_citation[citation_id].section_title,
-            source_citation=citation_id,
+        rrf_scores = _weighted_reciprocal_rank_scores(
+            [
+                [hit.source_citation for hit in faiss_hits],
+                [hit.source_citation for hit in bm25_hits],
+            ],
+            resolved_weights,
         )
-        for citation_id, score in zip(fused_ids, normalized_scores)
-    ]
-    return results[:k]
+
+        fused_ids = sorted(hits_by_citation, key=lambda cid: rrf_scores[cid], reverse=True)
+        normalized_scores = normalize_scores([rrf_scores[cid] for cid in fused_ids])
+
+        results = [
+            HybridQueryResult(
+                text=hits_by_citation[citation_id].text,
+                score=score,
+                domain=hits_by_citation[citation_id].domain,
+                act_name=hits_by_citation[citation_id].act_name,
+                act_year=hits_by_citation[citation_id].act_year,
+                chapter=hits_by_citation[citation_id].chapter,
+                section_number=hits_by_citation[citation_id].section_number,
+                section_title=hits_by_citation[citation_id].section_title,
+                source_citation=citation_id,
+            )
+            for citation_id, score in zip(fused_ids, normalized_scores)
+        ]
+        logger.info("Vector search completed")
+        return results[:k]
+    except Exception as exc:
+        logger.exception("Vector search failed: %s", type(exc).__name__)
+        raise

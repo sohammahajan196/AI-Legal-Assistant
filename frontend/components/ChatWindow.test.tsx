@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import ChatWindow from "./ChatWindow";
 import {
   ApiClientError,
+  fetchBackendHealth,
   fetchSessionHistory,
   sendChatMessage,
 } from "@/lib/apiClient";
@@ -19,6 +20,7 @@ vi.mock("@/lib/apiClient", async () => {
     ...actual,
     sendChatMessage: vi.fn(),
     fetchSessionHistory: vi.fn(),
+    fetchBackendHealth: vi.fn(),
   };
 });
 
@@ -46,6 +48,13 @@ const SAMPLE_RESPONSE = {
   disclaimer: "This is not a substitute for licensed legal counsel.",
 };
 
+const HEALTHY = {
+  status: "ok" as const,
+  frontend: "ok" as const,
+  backend: "ok" as const,
+  backend_token_configured: true,
+};
+
 function readLastOutgoingPayload() {
   return JSON.parse(
     screen.getByTestId("last-outgoing-payload").textContent ?? "{}"
@@ -54,6 +63,10 @@ function readLastOutgoingPayload() {
 
 describe("ChatWindow consent wiring", () => {
   beforeEach(() => {
+    vi.mocked(fetchBackendHealth).mockReset();
+    vi.mocked(fetchSessionHistory).mockReset();
+    vi.mocked(sendChatMessage).mockReset();
+    vi.mocked(fetchBackendHealth).mockResolvedValue(HEALTHY);
     vi.mocked(fetchSessionHistory).mockResolvedValue([]);
     vi.mocked(sendChatMessage).mockResolvedValue(SAMPLE_RESPONSE);
   });
@@ -96,6 +109,10 @@ describe("ChatWindow consent wiring", () => {
 
 describe("ChatWindow user_type wiring", () => {
   beforeEach(() => {
+    vi.mocked(fetchBackendHealth).mockReset();
+    vi.mocked(fetchSessionHistory).mockReset();
+    vi.mocked(sendChatMessage).mockReset();
+    vi.mocked(fetchBackendHealth).mockResolvedValue(HEALTHY);
     vi.mocked(fetchSessionHistory).mockResolvedValue([]);
     vi.mocked(sendChatMessage).mockResolvedValue(SAMPLE_RESPONSE);
   });
@@ -140,6 +157,10 @@ describe("ChatWindow user_type wiring", () => {
 
 describe("ChatWindow backend wiring", () => {
   beforeEach(() => {
+    vi.mocked(fetchBackendHealth).mockReset();
+    vi.mocked(fetchSessionHistory).mockReset();
+    vi.mocked(sendChatMessage).mockReset();
+    vi.mocked(fetchBackendHealth).mockResolvedValue(HEALTHY);
     vi.mocked(fetchSessionHistory).mockResolvedValue([]);
     vi.mocked(sendChatMessage).mockResolvedValue(SAMPLE_RESPONSE);
   });
@@ -178,7 +199,24 @@ describe("ChatWindow backend wiring", () => {
       expect(screen.getByText("What is theft?")).toBeInTheDocument()
     );
     expect(screen.getByText("Theft is under Section 379 IPC.")).toBeInTheDocument();
+    expect(fetchBackendHealth).toHaveBeenCalled();
     expect(fetchSessionHistory).toHaveBeenCalledWith("session-test-id");
+  });
+
+  it("surfaces backend health failures on mount before chat", async () => {
+    vi.mocked(fetchBackendHealth).mockRejectedValue(
+      new ApiClientError("Backend unavailable", 502)
+    );
+
+    render(<ChatWindow />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("chat-error")).toHaveTextContent(
+        "Backend unavailable"
+      )
+    );
+    expect(fetchSessionHistory).not.toHaveBeenCalled();
+    expect(screen.getByTestId("empty-state")).toBeInTheDocument();
   });
 
   it("surfaces backend errors visibly", async () => {

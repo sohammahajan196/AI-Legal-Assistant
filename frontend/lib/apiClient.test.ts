@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   ApiClientError,
+  fetchBackendHealth,
   fetchSessionHistory,
   sendChatMessage,
 } from "./apiClient";
@@ -71,6 +72,56 @@ describe("sendChatMessage", () => {
         consentToLog: true,
       })
     ).rejects.toMatchObject({
+      name: "ApiClientError",
+      message: "Backend unavailable",
+      status: 502,
+    });
+  });
+});
+
+describe("fetchBackendHealth", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("returns the health payload when the probe succeeds", async () => {
+    const payload = {
+      status: "ok",
+      frontend: "ok",
+      backend: "ok",
+      backend_token_configured: true,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(payload), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      )
+    );
+
+    await expect(fetchBackendHealth()).resolves.toEqual(payload);
+  });
+
+  it("throws ApiClientError with the probe error message on failure", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            status: "error",
+            frontend: "ok",
+            backend: "unreachable",
+            backend_token_configured: true,
+            error: "Backend unavailable",
+          }),
+          { status: 502 }
+        )
+      )
+    );
+
+    await expect(fetchBackendHealth()).rejects.toMatchObject({
       name: "ApiClientError",
       message: "Backend unavailable",
       status: 502,

@@ -6,7 +6,6 @@ See PLAN.md Section 8 and TASKS.md T35.
 
 from __future__ import annotations
 
-import logging
 from functools import lru_cache
 
 from fastapi import FastAPI, Request
@@ -16,9 +15,8 @@ from slowapi.middleware import SlowAPIMiddleware
 from starlette.responses import JSONResponse
 
 from app.core.config import settings
+from app.core.logging import logger
 from app.core.security import get_token_tier
-
-logger = logging.getLogger(__name__)
 
 _limiter: Limiter | None = None
 
@@ -48,7 +46,7 @@ def get_rate_limit_tier_mapping() -> dict[str, int]:
 
 
 def reset_rate_limit_tier_mapping_cache() -> None:
-    """Clear the cached tier-limit mapping (for tests and config reloads)."""
+    """Clear the cached tier-limit mapping (for tests)."""
     get_rate_limit_tier_mapping.cache_clear()
 
 
@@ -113,8 +111,11 @@ def reset_limiter() -> None:
     reset_rate_limit_tier_mapping_cache()
 
 
-async def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+async def rate_limit_exceeded_handler(request: Request, exc: Exception) -> JSONResponse:
     """Return a clear 429 payload when a token exceeds its configured rate."""
+    if not isinstance(exc, RateLimitExceeded):
+        raise exc
+    logger.error("Rate limit exceeded: %s %s", request.method, request.url.path)
     return JSONResponse(
         status_code=429,
         content={

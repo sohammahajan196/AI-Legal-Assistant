@@ -15,6 +15,7 @@ from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, create_engin
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 from app.core.config import settings
+from app.core.logging import logger
 
 
 class Base(DeclarativeBase):
@@ -66,9 +67,14 @@ def create_session() -> str:
     session_id = str(uuid.uuid4())
     now = datetime.now(UTC)
 
-    with _session_factory()() as db:
-        db.add(SessionRecord(id=session_id, created_at=now))
-        db.commit()
+    try:
+        with _session_factory()() as db:
+            db.add(SessionRecord(id=session_id, created_at=now))
+            db.commit()
+        logger.info("Database write: session created")
+    except Exception as exc:
+        logger.exception("Database write failed: %s", type(exc).__name__)
+        raise
 
     return session_id
 
@@ -77,30 +83,42 @@ def ensure_session(session_id: str) -> None:
     """Create a session row for a client-supplied id when it does not exist yet."""
     now = datetime.now(UTC)
 
-    with _session_factory()() as db:
-        if db.get(SessionRecord, session_id) is None:
-            db.add(SessionRecord(id=session_id, created_at=now))
-            db.commit()
+    try:
+        with _session_factory()() as db:
+            if db.get(SessionRecord, session_id) is None:
+                db.add(SessionRecord(id=session_id, created_at=now))
+                db.commit()
+                logger.info("Database write: session ensured")
+    except Exception as exc:
+        logger.exception("Database write failed: %s", type(exc).__name__)
+        raise
 
 
 def append_message(session_id: str, role: str, content: str) -> None:
     """Append a message to a session's history (`messages` table)."""
     now = datetime.now(UTC)
 
-    with _session_factory()() as db:
-        session_exists = db.get(SessionRecord, session_id)
-        if session_exists is None:
-            raise ValueError(f"Unknown session_id: {session_id}")
+    try:
+        with _session_factory()() as db:
+            session_exists = db.get(SessionRecord, session_id)
+            if session_exists is None:
+                raise ValueError(f"Unknown session_id: {session_id}")
 
-        db.add(
-            MessageRecord(
-                session_id=session_id,
-                role=role,
-                content=content,
-                created_at=now,
+            db.add(
+                MessageRecord(
+                    session_id=session_id,
+                    role=role,
+                    content=content,
+                    created_at=now,
+                )
             )
-        )
-        db.commit()
+            db.commit()
+        logger.info("Database write: message appended")
+    except ValueError:
+        raise
+    except Exception as exc:
+        logger.exception("Database write failed: %s", type(exc).__name__)
+        raise
 
 
 def get_history(session_id: str) -> list[dict]:
@@ -108,15 +126,20 @@ def get_history(session_id: str) -> list[dict]:
 
     Returns an empty list (not raise) for an unknown `session_id`.
     """
-    with _session_factory()() as db:
-        session_exists = db.get(SessionRecord, session_id)
-        if session_exists is None:
-            return []
+    try:
+        with _session_factory()() as db:
+            session_exists = db.get(SessionRecord, session_id)
+            if session_exists is None:
+                return []
 
-        rows = db.scalars(
-            select(MessageRecord)
-            .where(MessageRecord.session_id == session_id)
-            .order_by(MessageRecord.id.asc())
-        ).all()
+            rows = db.scalars(
+                select(MessageRecord)
+                .where(MessageRecord.session_id == session_id)
+                .order_by(MessageRecord.id.asc())
+            ).all()
+        logger.info("Database read: session history")
+    except Exception as exc:
+        logger.exception("Database read failed: %s", type(exc).__name__)
+        raise
 
     return [{"role": row.role, "content": row.content} for row in rows]

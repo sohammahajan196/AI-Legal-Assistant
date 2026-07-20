@@ -9,7 +9,7 @@ path. All tests are fully mocked -- no real network/LLM calls.
 from __future__ import annotations
 
 import json
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -20,6 +20,14 @@ from app.rag.structured_llm import (
     generate_structured_answer,
 )
 from app.schemas.legal_answer import LegalDomain, LLMStructuredAnswer
+
+
+class _FakeServerError(Exception):
+    """Mimics google.genai.errors.ServerError for transient 503 tests."""
+
+    def __init__(self, message: str, status_code: int = 503) -> None:
+        super().__init__(message)
+        self.status_code = status_code
 
 
 def _validation_error() -> ValidationError:
@@ -206,3 +214,40 @@ async def test_repair_appends_to_chat_message_list_prompts():
     assert retry_prompt[:2] == original_messages
     assert isinstance(retry_prompt[-1], HumanMessage)
     assert str(error) in retry_prompt[-1].content
+
+
+@pytest.mark.asyncio
+async def test_retries_transient_503_then_succeeds():
+    """A Gemini 503 UNAVAILABLE on the first call is retried and recovers."""
+    valid_result = LLMStructuredAnswer(answer="ok", legal_domain=LegalDomain.CRIMINAL)
+    transient = _FakeServerError(
+        "503 UNAVAILABLE. This model is currently experiencing high demand."
+    )
+    structured_llm = MagicMock()
+    structured_llm.ainvoke = AsyncMock(side_effect=[transient, valid_result])
+    llm = _mock_llm_with_structured_llm(structured_llm)
+
+    with patch("app.rag.structured_llm.asyncio.sleep", new_callable=AsyncMock) as sleep:
+        result = await generate_structured_answer(llm, "What is theft?", LLMStructuredAnswer)
+
+    assert result is valid_result
+    assert structured_llm.ainvoke.await_count == 2
+    sleep.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_exhausts_transient_503_retries_and_reraises():
+    """Persistent 503 after transient retries is re-raised (not swallowed)."""
+    transient = _FakeServerError(
+        "503 UNAVAILABLE. This model is currently experiencing high demand."
+    )
+    structured_llm = MagicMock()
+    structured_llm.ainvoke = AsyncMock(side_effect=transient)
+    llm = _mock_llm_with_structured_llm(structured_llm)
+
+    with patch("app.rag.structured_llm.asyncio.sleep", new_callable=AsyncMock):
+        with pytest.raises(_FakeServerError):
+            await generate_structured_answer(llm, "What is theft?", LLMStructuredAnswer)
+
+    # initial attempt + 2 transient retries
+    assert structured_llm.ainvoke.await_count == 3

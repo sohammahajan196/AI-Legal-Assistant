@@ -24,6 +24,7 @@ import {
 } from "@/components/UserTypeSelector";
 import {
   ApiClientError,
+  fetchBackendHealth,
   fetchSessionHistory,
   sendChatMessage,
 } from "@/lib/apiClient";
@@ -38,7 +39,7 @@ import {
 import { getOrCreateSessionId } from "@/lib/sessionStorage";
 import type { SourceCitation } from "@/lib/types";
 
-interface ChatMessage extends ChatMessageView {}
+type ChatMessage = ChatMessageView;
 
 export default function ChatWindow() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -75,7 +76,26 @@ export default function ChatWindow() {
     const activeSessionId = getOrCreateSessionId();
     setSessionId(activeSessionId);
 
-    async function loadSessionHistory() {
+    async function boot() {
+      try {
+        await fetchBackendHealth();
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        const status =
+          error instanceof ApiClientError ? error.status : undefined;
+        const message =
+          error instanceof ApiClientError
+            ? error.message
+            : "Unable to reach the backend.";
+        setErrorMessage(message);
+        setErrorStatus(status);
+        setMessages([]);
+        setIsLoadingHistory(false);
+        return;
+      }
+
       try {
         const history = await fetchSessionHistory(activeSessionId);
         if (cancelled) {
@@ -129,7 +149,7 @@ export default function ChatWindow() {
       }
     }
 
-    void loadSessionHistory();
+    void boot();
 
     // Safety: never leave the UI stuck on the skeleton forever.
     const safetyTimer = window.setTimeout(() => {

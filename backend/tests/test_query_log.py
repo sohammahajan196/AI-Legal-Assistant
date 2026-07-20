@@ -76,8 +76,8 @@ def test_all_schema_fields_are_populated_for_sample_request(isolated_db):
 
 def test_logging_failure_is_caught_and_does_not_raise(isolated_db, caplog):
     with patch("app.services.query_log._session_factory", side_effect=RuntimeError("DB write error")):
-        with caplog.at_level("WARNING"):
+        with caplog.at_level("ERROR"):
             log_query(consent_to_log=True, **SAMPLE_LOG_KWARGS)
 
-    assert any("Query log write failed" in record.message for record in caplog.records)
+    assert any("Database write failed" in record.message for record in caplog.records)
     assert query_log.fetch_query_logs() == []

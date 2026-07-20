@@ -130,6 +130,7 @@ docker compose up --build
 | URL | Service |
 |---|---|
 | http://localhost:3000 | Chat UI |
+| http://localhost:3000/api/health | Frontend → backend health probe (env + `/api/v1/health`) |
 | http://localhost:8000/api/v1/health | Backend health check |
 
 ### 4. Send a chat message
@@ -192,7 +193,8 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements.txt
-cp ../.env .env          # backend reads .env from its working directory
+# Settings loads the repo-root .env (and backend/.env if present) via absolute
+# paths — no need to copy .env into backend/ just to start uvicorn.
 
 python scripts/ingest.py
 python scripts/build_index.py
@@ -213,6 +215,8 @@ npm run dev
 ```
 
 Open http://localhost:3000 and send a chat message.
+
+Verify the proxy wiring with http://localhost:3000/api/health → `{"status":"ok", ...}` before chatting if the UI looks stuck.
 
 ---
 
@@ -271,8 +275,13 @@ Reports are written to `backend/eval/results/`:
 From `backend/` with the virtualenv activated:
 
 ```bash
+pip install -r requirements.txt -r requirements-dev.txt
 pytest -q
+ruff check app tests scripts
+mypy
 ```
+
+`ruff` / `mypy` settings live in `backend/pyproject.toml`. GitHub Actions runs the same three commands on every PR (see `.github/workflows/ci.yml`).
 
 Tests use safe defaults from `tests/conftest.py` — no real Gemini calls, network, or Redis required for the suite.
 
@@ -282,8 +291,11 @@ From `frontend/`:
 
 ```bash
 npm test
+npm run lint
+npx tsc --noEmit
 ```
 
+CI also runs these on every PR.
 ---
 
 ## Project layout
@@ -311,7 +323,7 @@ docker-compose.yml  Backend + frontend + Redis
 
 | Symptom | Likely fix |
 |---|---|
-| Backend won't start: `GOOGLE_API_KEY must not be blank` | Set a real key in `backend/.env` (local) or root `.env` (Docker) |
+| Backend won't start: `GOOGLE_API_KEY must not be blank` | Set a real key in the repo-root `.env` (or `backend/.env`) |
 | Chat returns 503 "Backend proxy is not configured" | Set `BACKEND_API_URL` and `BACKEND_API_TOKEN` in `frontend/.env.local` |
 | Chat returns 401 from backend | `BACKEND_API_TOKEN` must match a token in `BACKEND_API_TOKENS` |
 | Refusal on every question | Indices not built — run `scripts/build_index.py` or the compose one-liners above |

@@ -9,6 +9,7 @@ import pytest
 from langchain_core.embeddings import Embeddings
 
 from app.rag.chunking import LegalChunk
+from app.rag.exceptions import RetrievalIndexNotFoundError
 from app.rag.vectorstore import (
     FAISS_DOCSTORE_FILE,
     FAISS_INDEX_FILE,
@@ -192,8 +193,11 @@ def test_load_faiss_index_missing_dir_raises(
     tmp_path: Path,
     embedding_model: KeywordEmbeddings,
 ):
-    with pytest.raises(FileNotFoundError, match="FAISS index not found"):
+    with pytest.raises(RetrievalIndexNotFoundError, match="FAISS index not found") as exc_info:
         load_faiss_index(str(tmp_path / "missing"), embedding_model)
+
+    assert "build_index.py" in str(exc_info.value)
+    assert isinstance(exc_info.value, FileNotFoundError)
 
 
 def test_query_faiss_index_rejects_invalid_k(

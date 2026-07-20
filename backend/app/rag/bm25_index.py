@@ -16,6 +16,7 @@ from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 
 from app.rag.chunking import LegalChunk
+from app.rag.exceptions import RetrievalIndexNotFoundError
 from app.rag.vectorstore import chunk_to_document
 
 BM25_INDEX_FILE = "bm25_retriever.pkl"
@@ -91,8 +92,10 @@ def load_bm25_index(persist_dir: str) -> BM25Retriever:
     index_path = persist_path / BM25_INDEX_FILE
 
     if not index_path.is_file():
-        raise FileNotFoundError(
-            f"BM25 index not found at {persist_dir!r} (expected {BM25_INDEX_FILE!r})"
+        raise RetrievalIndexNotFoundError(
+            "BM25",
+            persist_dir,
+            f"{BM25_INDEX_FILE!r}",
         )
 
     with open(index_path, "rb") as handle:

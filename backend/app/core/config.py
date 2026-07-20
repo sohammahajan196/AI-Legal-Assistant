@@ -6,14 +6,34 @@ all other modules must obtain configuration through the `settings` object
 defined here. See PLAN.md Section 8, TASKS.md T03, and backend.mdc.
 """
 
+from pathlib import Path
+
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# backend/app/core/config.py → parents[2] == backend/, parents[3] == repo root.
+_BACKEND_ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = _BACKEND_ROOT.parent
+
+
+def default_env_files() -> tuple[Path, ...]:
+    """Absolute ``.env`` paths, independent of the process working directory.
+
+    Loads the repo-root ``.env`` first, then ``backend/.env``. Later files
+    override earlier ones; real process env vars still win over both.
+    Missing files are ignored by pydantic-settings.
+    """
+    return (_REPO_ROOT / ".env", _BACKEND_ROOT / ".env")
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables / a .env file."""
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=default_env_files(),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     # LLM
     # Required: the app cannot serve grounded answers without a real Gemini
@@ -23,7 +43,7 @@ class Settings(BaseSettings):
         ...,
         description="Gemini API key (required). Set in a .env file - see .env.example.",
     )
-    gemini_model: str = "gemini-3.5-flash"
+    gemini_model: str = "gemini-2.5-flash"
     gemini_temperature: float = Field(
         default=0.0,
         ge=0.0,

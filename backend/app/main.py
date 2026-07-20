@@ -14,37 +14,72 @@ time with a clear pydantic validation error, rather than booting silently
 and failing later inside a request (see TASKS.md T03).
 """
 
-import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 
 from app.api.routes import chat, domains, health, sessions
-from app.core.config import settings
-from app.core.logging import configure_logging
+from app.core.logging import configure_logging, logger
 from app.core.rate_limit import register_rate_limiting
+from app.rag.exceptions import RetrievalIndexNotFoundError
 
 configure_logging()
-logger = logging.getLogger(__name__)
+
+
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    """Log each incoming request and its final status code."""
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        logger.info("%s %s", request.method, request.url.path)
+        try:
+            response = await call_next(request)
+        except Exception as exc:
+            logger.exception(
+                "Request failed: %s %s: %s",
+                request.method,
+                request.url.path,
+                type(exc).__name__,
+            )
+            raise
+
+        if response.status_code >= 400:
+            logger.error("Response sent (%s)", response.status_code)
+        else:
+            logger.info("Response sent (%s)", response.status_code)
+        return response
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """Startup/shutdown hook.
 
-    Currently just emits structured startup/shutdown log lines (T03).
+    Emits console startup/shutdown log lines (T03).
 
     TODO: also load the FAISS/BM25 indices into memory once
     app.rag.vectorstore / app.rag.bm25_index exist.
     """
-    logger.info("application_startup", extra={"gemini_model": settings.gemini_model})
+    logger.info("Server started")
     yield
-    logger.info("application_shutdown")
+    logger.info("Server stopped")
 
 
 app = FastAPI(title="AI Legal Assistant API", lifespan=lifespan)
+app.add_middleware(RequestLoggingMiddleware)
 register_rate_limiting(app, chat.limiter)
+
+
+@app.exception_handler(RetrievalIndexNotFoundError)
+async def retrieval_index_not_found_handler(
+    _request: Request, exc: RetrievalIndexNotFoundError
+) -> JSONResponse:
+    """Map missing FAISS/BM25 artifacts to a clear 503 instead of an opaque 500."""
+    logger.error("Retrieval indices missing: %s", exc)
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
+
 
 app.include_router(chat.router, prefix="/api/v1")
 app.include_router(sessions.router, prefix="/api/v1")

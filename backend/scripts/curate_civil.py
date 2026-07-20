@@ -15,12 +15,12 @@ import sys
 from datetime import date
 from pathlib import Path
 
+import httpx
+
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(BACKEND_ROOT))
 
-import httpx
-
-from app.rag.corpus_curation import (
+from app.rag.corpus_curation import (  # noqa: E402
     CPC_SOURCE,
     curate_act_text,
     extract_pdf_text,

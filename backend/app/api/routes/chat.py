@@ -13,6 +13,7 @@ import time
 from fastapi import APIRouter, Depends, Request, Response
 
 from app.core.config import settings
+from app.core.logging import logger
 from app.core.rate_limit import get_limiter, get_rate_limit_string
 from app.core.security import verify_bearer_token
 from app.schemas.chat import ChatRequest, ChatResponse
@@ -45,10 +46,16 @@ async def chat(
     after the response is available. `log_query` catches its own failures
     (T36), so logging cannot fail the parent request.
     """
+    logger.info("Processing query")
     start = time.perf_counter()
-    response = await handle_chat_request(payload.query, payload.session_id, payload.user_type)
+    try:
+        answer = await handle_chat_request(payload.query, payload.session_id, payload.user_type)
+    except Exception as exc:
+        logger.exception("Failed to process query: %s", type(exc).__name__)
+        raise
+
     latency_ms = (time.perf_counter() - start) * 1000
-    chat_response = ChatResponse.model_validate(response.model_dump())
+    chat_response = ChatResponse.model_validate(answer.model_dump())
 
     log_query(
         token_hash=_hash_token(token),

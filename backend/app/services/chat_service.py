@@ -11,14 +11,11 @@ on ``ChatRequest`` governs audit logging only (T36), not caching.
 
 from __future__ import annotations
 
-import logging
-
+from app.core.logging import logger
 from app.rag.cache import get_cached_response, set_cached_response
 from app.rag.chain import run_rag_chain
 from app.schemas.legal_answer import LegalAnswerResponse
 from app.services.session_store import append_message, ensure_session, get_history
-
-logger = logging.getLogger(__name__)
 
 
 def _persist_messages(session_id: str | None, query: str, answer: str) -> None:
@@ -29,8 +26,8 @@ def _persist_messages(session_id: str | None, query: str, answer: str) -> None:
     try:
         append_message(session_id, "user", query)
         append_message(session_id, "assistant", answer)
-    except ValueError:
-        logger.warning("Skipping message persistence for unknown session_id=%s", session_id)
+    except ValueError as exc:
+        logger.exception("Failed to persist messages: %s", type(exc).__name__)
 
 
 async def handle_chat_request(
@@ -48,15 +45,20 @@ async def handle_chat_request(
 
     cached = await get_cached_response(query, user_type)
     if cached is not None:
+        logger.info("Cache hit")
         _persist_messages(session_id, query, cached.answer)
         return cached
 
-    response = await run_rag_chain(
-        query,
-        session_id,
-        user_type,
-        history=history,
-    )
+    try:
+        response = await run_rag_chain(
+            query,
+            session_id,
+            user_type,
+            history=history,
+        )
+    except Exception as exc:
+        logger.exception("RAG chain failed: %s", type(exc).__name__)
+        raise
 
     await set_cached_response(query, user_type, response)
     _persist_messages(session_id, query, response.answer)

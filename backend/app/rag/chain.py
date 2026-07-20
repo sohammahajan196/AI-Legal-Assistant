@@ -186,6 +186,7 @@ async def run_rag_chain(
     except StructuredOutputGenerationError:
         # Refuse rather than guess (general.mdc) -- a repair loop that never
         # converges is treated the same as "nothing trustworthy to answer with".
+        # Failure is already logged inside generate_structured_answer.
         return build_refusal_response(LegalDomain.OTHER, RESPONSE_DISCLAIMER)
 
     used_citations = _resolve_citations(structured_answer.used_citation_ids, reranked_results)

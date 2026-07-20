@@ -1,4 +1,4 @@
-"""Unit tests for app.core.logging structured JSON logging. See TASKS.md T03."""
+"""Unit tests for app.core.logging console logging. See TASKS.md T03."""
 
 import json
 import logging
@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from app.core.logging import JsonFormatter, configure_logging
+from app.core.logging import ConsoleFormatter, JsonFormatter, configure_logging, logger
 
 
 def _make_record(
@@ -26,6 +26,29 @@ def _make_record(
     for key, value in (extra or {}).items():
         setattr(record, key, value)
     return record
+
+
+def test_console_formatter_output_is_readable():
+    """Each formatted log line must be a short ``LEVEL | message`` line."""
+    formatter = ConsoleFormatter()
+    record = _make_record("Server started")
+
+    assert formatter.format(record) == "INFO  | Server started"
+
+
+def test_console_formatter_includes_exception_info():
+    """Exception info, when present, is appended after the console line."""
+    formatter = ConsoleFormatter()
+    try:
+        raise ValueError("boom")
+    except ValueError:
+        record = _make_record("failure", level=logging.ERROR)
+        record.exc_info = sys.exc_info()
+
+    formatted = formatter.format(record)
+
+    assert formatted.startswith("ERROR | failure")
+    assert "ValueError: boom" in formatted
 
 
 def test_json_formatter_output_is_valid_json():
@@ -75,19 +98,13 @@ def test_json_formatter_includes_exception_info():
     assert "ValueError: boom" in parsed["exception"]
 
 
-def test_configure_logging_emits_structured_json(capsys: pytest.CaptureFixture[str]):
-    """After configure_logging(), a log line emitted at startup is valid JSON
-    with timestamp and level fields (T03 acceptance criterion)."""
+def test_configure_logging_emits_console_lines(capsys: pytest.CaptureFixture[str]):
+    """After configure_logging(), a log line is a readable console line."""
     configure_logging()
-    logger = logging.getLogger("app.startup_test")
 
-    logger.info("application_startup", extra={"gemini_model": "gemini-2.5-flash"})
+    logger.info("Server started")
 
     captured = capsys.readouterr()
-    line = captured.err.strip() or captured.out.strip()
-    parsed = json.loads(line)
+    line = (captured.err.strip() or captured.out.strip()).splitlines()[0]
 
-    assert parsed["level"] == "INFO"
-    assert parsed["message"] == "application_startup"
-    assert "timestamp" in parsed
-    assert parsed["gemini_model"] == "gemini-2.5-flash"
+    assert line == "INFO  | Server started"

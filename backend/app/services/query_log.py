@@ -8,15 +8,14 @@ from __future__ import annotations
 
 import hashlib
 import json
-import logging
 from datetime import UTC, datetime
+from typing import cast
 
-from sqlalchemy import DateTime, Float, Integer, String, Text, select
+from sqlalchemy import DateTime, Float, Integer, String, Table, Text, select
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.core.logging import logger
 from app.services.session_store import Base, _get_engine, _session_factory
-
-logger = logging.getLogger(__name__)
 
 
 class QueryLogRecord(Base):
@@ -39,7 +38,8 @@ def _hash_query(query: str) -> str:
 
 def _ensure_query_log_table() -> None:
     """Create the ``query_logs`` table in the shared SQLite database if needed."""
-    Base.metadata.create_all(_get_engine(), tables=[QueryLogRecord.__table__])
+    table = cast(Table, QueryLogRecord.__table__)
+    Base.metadata.create_all(_get_engine(), tables=[table])
 
 
 def log_query(
@@ -75,12 +75,19 @@ def log_query(
         with _session_factory()() as db:
             db.add(record)
             db.commit()
+        logger.info("Database write: query log")
     except Exception as exc:
-        logger.warning("Query log write failed, skipping: %s", exc)
+        logger.exception("Database write failed: %s", type(exc).__name__)
 
 
 def fetch_query_logs() -> list[QueryLogRecord]:
     """Return all persisted query log rows (intended for tests/diagnostics)."""
-    _ensure_query_log_table()
-    with _session_factory()() as db:
-        return list(db.scalars(select(QueryLogRecord).order_by(QueryLogRecord.id.asc())).all())
+    try:
+        _ensure_query_log_table()
+        with _session_factory()() as db:
+            rows = list(db.scalars(select(QueryLogRecord).order_by(QueryLogRecord.id.asc())).all())
+        logger.info("Database read: query logs")
+        return rows
+    except Exception as exc:
+        logger.exception("Database read failed: %s", type(exc).__name__)
+        raise

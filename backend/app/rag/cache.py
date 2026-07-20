@@ -8,17 +8,15 @@ from __future__ import annotations
 
 import hashlib
 import json
-import logging
 import math
 
 import redis.asyncio as aioredis
 from langchain_core.embeddings import Embeddings
 
 from app.core.config import settings
+from app.core.logging import logger
 from app.rag.embeddings import get_embedding_model
 from app.schemas.legal_answer import LegalAnswerResponse
-
-logger = logging.getLogger(__name__)
 
 _EXACT_KEY_PREFIX = "legal_assistant:cache:exact:"
 _SEMANTIC_KEY_PREFIX = "legal_assistant:cache:semantic:"
@@ -126,7 +124,7 @@ async def get_cached_response(
             return None
         return LegalAnswerResponse.model_validate_json(cached)
     except Exception as exc:
-        logger.warning("Cache lookup failed, skipping cache: %s", exc)
+        logger.exception("Cache lookup failed: %s", type(exc).__name__)
         return None
 
 
@@ -162,7 +160,7 @@ async def set_cached_response(
         await client.ltrim(semantic_key, 0, settings.cache_semantic_max_entries - 1)
         await client.expire(semantic_key, settings.cache_ttl_seconds)
     except Exception as exc:
-        logger.warning("Cache store failed, skipping cache: %s", exc)
+        logger.exception("Cache store failed: %s", type(exc).__name__)
 
 
 async def close_redis_client() -> None:

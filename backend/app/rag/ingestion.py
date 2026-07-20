@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from app.core.logging import logger
 from app.rag.chunking import DEFAULT_MAX_SECTION_CHARS, LegalChunk, parse_act_text
 from app.rag.corpus_curation import (
     COW_SOURCE,
@@ -174,35 +175,42 @@ def ingest_domain(
     max_section_chars: int = DEFAULT_MAX_SECTION_CHARS,
 ) -> IngestResult:
     """Parse all known act ``.txt`` files in a domain folder and write JSONL."""
-    if domain not in DOMAIN_ACT_SOURCES:
-        raise ValueError(f"Unsupported domain: {domain!r}")
+    logger.info("Document upload started (%s)", domain)
+    try:
+        if domain not in DOMAIN_ACT_SOURCES:
+            raise ValueError(f"Unsupported domain: {domain!r}")
 
-    expected_files = {act.filename for act in DOMAIN_ACT_SOURCES[domain]}
-    present_txt_files = sorted(
-        path for path in raw_domain_dir.glob("*.txt") if path.name in expected_files
-    )
-    missing_files = sorted(expected_files - {path.name for path in present_txt_files})
-    if missing_files:
-        raise FileNotFoundError(
-            f"Missing raw act file(s) for domain {domain!r} under {raw_domain_dir}: "
-            + ", ".join(missing_files)
+        expected_files = {act.filename for act in DOMAIN_ACT_SOURCES[domain]}
+        present_txt_files = sorted(
+            path for path in raw_domain_dir.glob("*.txt") if path.name in expected_files
         )
+        missing_files = sorted(expected_files - {path.name for path in present_txt_files})
+        if missing_files:
+            raise FileNotFoundError(
+                f"Missing raw act file(s) for domain {domain!r} under {raw_domain_dir}: "
+                + ", ".join(missing_files)
+            )
 
-    chunks: list[LegalChunk] = []
-    act_chunk_counts: dict[str, int] = {}
+        chunks: list[LegalChunk] = []
+        act_chunk_counts: dict[str, int] = {}
 
-    for path in present_txt_files:
-        act = _resolve_act_for_file(domain, path)
-        act_chunks = parse_act_file(
-            path,
-            domain=domain,
-            act=act,
-            max_section_chars=max_section_chars,
-        )
-        act_chunk_counts[path.name] = len(act_chunks)
-        chunks.extend(act_chunks)
+        for path in present_txt_files:
+            act = _resolve_act_for_file(domain, path)
+            act_chunks = parse_act_file(
+                path,
+                domain=domain,
+                act=act,
+                max_section_chars=max_section_chars,
+            )
+            act_chunk_counts[path.name] = len(act_chunks)
+            chunks.extend(act_chunks)
 
-    write_jsonl(output_path, chunks)
+        write_jsonl(output_path, chunks)
+    except Exception as exc:
+        logger.exception("Failed to upload document: %s", type(exc).__name__)
+        raise
+
+    logger.info("Document upload completed (%s)", domain)
     return IngestResult(
         domain=domain,
         output_path=output_path,

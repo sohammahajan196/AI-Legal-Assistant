@@ -1,6 +1,6 @@
 /**
- * Thin wrapper around calls to the /api/chat and /api/sessions/* proxy
- * routes, keeping fetch/error-handling logic out of components.
+ * Thin wrapper around calls to the /api/chat, /api/sessions/*, and /api/health
+ * proxy routes, keeping fetch/error-handling logic out of components.
  * See TASKS.md T47.
  */
 import { buildChatRequestPayload } from "@/lib/chatPayload";
@@ -15,6 +15,14 @@ export interface ChatRequestPayload {
   sessionId?: string;
   userType: "layperson" | "law_student" | "lawyer";
   consentToLog: boolean;
+}
+
+export interface FrontendHealthResponse {
+  status: "ok" | "degraded" | "error";
+  frontend: "ok" | "misconfigured";
+  backend: "ok" | "unavailable" | "unreachable" | "unhealthy";
+  backend_token_configured: boolean;
+  error?: string;
 }
 
 export class ApiClientError extends Error {
@@ -43,6 +51,29 @@ async function readErrorMessage(response: Response): Promise<string> {
     // Fall through to the generic message below.
   }
   return `Request failed (${response.status})`;
+}
+
+export async function fetchBackendHealth(): Promise<FrontendHealthResponse> {
+  const response = await fetch("/api/health", { cache: "no-store" });
+
+  let body: FrontendHealthResponse;
+  try {
+    body = (await response.json()) as FrontendHealthResponse;
+  } catch {
+    throw new ApiClientError(
+      `Request failed (${response.status})`,
+      response.status
+    );
+  }
+
+  if (!response.ok) {
+    throw new ApiClientError(
+      body.error ?? `Request failed (${response.status})`,
+      response.status
+    );
+  }
+
+  return body;
 }
 
 export async function sendChatMessage(
