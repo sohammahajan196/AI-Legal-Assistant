@@ -31,17 +31,38 @@ COPY app ./app
 COPY scripts ./scripts
 COPY data/raw ./data/raw
 
+# Embedding weights + HF hub cache live inside the image so runtime never
+# hits Hugging Face (Render free tier has no persistent disk and tight RAM).
+ENV HF_HOME=/app/.cache/huggingface
+ENV SENTENCE_TRANSFORMERS_HOME=/app/.cache/sentence_transformers
+ENV EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+# GOOGLE_API_KEY here is a build-time-only placeholder: ingest/build_index never
+# call Gemini, they only need Settings to pass its non-blank validation. The
+# real key is supplied at runtime by the hosting platform's env vars, which
+# override this image default.
+ENV GOOGLE_API_KEY=build-time-placeholder
+
+# Pre-download the embedding model into HF_HOME / SENTENCE_TRANSFORMERS_HOME
+# before building the FAISS/BM25 index (same model must embed corpus + queries).
+RUN python -c "\
+from sentence_transformers import SentenceTransformer; \
+import os; \
+SentenceTransformer(os.environ['EMBEDDING_MODEL']); \
+print('Cached embedding model:', os.environ['EMBEDDING_MODEL'])"
+
 # Bake the retrieval index into the image itself so the backend can serve
 # traffic without a runtime volume — required on hosts with no persistent
 # disk (e.g. Render's free tier). On docker-compose, an empty named volume
 # mounted over data/faiss_index is auto-populated from this image content on
 # first `up`, so this stays compatible with the existing volume-based flow.
-# GOOGLE_API_KEY here is a build-time-only placeholder: these scripts never
-# call Gemini, they only need Settings to pass its non-blank validation. The
-# real key is supplied at runtime by the hosting platform's env vars, which
-# override this image default.
-ENV GOOGLE_API_KEY=build-time-placeholder
 RUN python scripts/ingest.py && python scripts/build_index.py
+
+# After weights + index are on disk, refuse any further hub downloads at
+# runtime (wrong EMBEDDING_MODEL on the host will fail loudly instead of
+# OOM-downloading a larger model).
+ENV HF_HUB_OFFLINE=1
+ENV TRANSFORMERS_OFFLINE=1
+ENV HF_DATASETS_OFFLINE=1
 
 # Writable data dirs; FAISS index is persisted via a named volume at runtime
 # in docker-compose (pre-populated above for volume-less hosts).

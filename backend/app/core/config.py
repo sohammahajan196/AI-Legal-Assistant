@@ -78,8 +78,9 @@ class Settings(BaseSettings):
     # Auth
     backend_api_tokens: str = ""
 
-    # Embeddings
-    embedding_model: str = "BAAI/bge-small-en-v1.5"
+    # Embeddings — MiniLM stays under Render's 512MB free-tier RAM budget;
+    # larger BGE models OOM when loaded alongside torch + FAISS.
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
 
     # Retrieval
     enable_reranker: bool = False

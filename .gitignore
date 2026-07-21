@@ -17,6 +17,7 @@ out/
 # --- Environment ---
 .env
 .env.local
+.env1.example
 
 # --- Generated data artifacts (see backend/data/**/.gitkeep) ---
 backend/data/faiss_index/*

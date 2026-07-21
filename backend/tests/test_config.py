@@ -15,7 +15,7 @@ def test_settings_loads_with_required_secret_present():
 
     assert settings.google_api_key.get_secret_value() == "a-real-looking-key"
     assert settings.gemini_model == "gemini-3.5-flash"
-    assert settings.embedding_model == "BAAI/bge-small-en-v1.5"
+    assert settings.embedding_model == "sentence-transformers/all-MiniLM-L6-v2"
     assert settings.confidence_refusal_threshold == 0.4
     assert settings.confidence_caution_threshold == 0.6
     assert settings.rate_limit_per_minute == 30

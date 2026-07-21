@@ -12,10 +12,14 @@ from langchain_huggingface import HuggingFaceEmbeddings
 
 from app.core.config import settings
 
-# Vector dimension for the default retrieval model (BAAI/bge-small-en-v1.5).
+# Vector dimension for the default retrieval model
+# (sentence-transformers/all-MiniLM-L6-v2) and other 384-d MiniLM/BGE-small
+# variants we still recognize for dimension checks.
+MINILM_L6_V2_DIMENSION = 384
 BGE_SMALL_EN_V1_5_DIMENSION = 384
 
 KNOWN_EMBEDDING_DIMENSIONS: dict[str, int] = {
+    "sentence-transformers/all-MiniLM-L6-v2": MINILM_L6_V2_DIMENSION,
     "BAAI/bge-small-en-v1.5": BGE_SMALL_EN_V1_5_DIMENSION,
 }
 
