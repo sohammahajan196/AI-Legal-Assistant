@@ -35,6 +35,7 @@ from app.rag.refusal import (
     should_refuse_after_generation,
     should_refuse_before_generation,
 )
+from app.rag.text_normalize import normalize_llm_text
 from app.rag.structured_llm import StructuredOutputGenerationError, generate_structured_answer
 from app.rag.vectorstore import load_faiss_index
 from app.schemas.legal_answer import LegalAnswerResponse, LegalDomain, LLMStructuredAnswer, SourceCitation
@@ -206,7 +207,7 @@ async def run_rag_chain(
         )
 
     return LegalAnswerResponse(
-        answer=structured_answer.answer,
+        answer=normalize_llm_text(structured_answer.answer),
         confidence_score=confidence_score,
         legal_domain=structured_answer.legal_domain,
         citations=used_citations,

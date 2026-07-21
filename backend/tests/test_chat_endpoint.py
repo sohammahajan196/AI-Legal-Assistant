@@ -13,7 +13,7 @@ from limits.strategies import FixedWindowRateLimiter
 
 from app.api.routes import chat as chat_route
 from app.main import app
-from app.rag.exceptions import INDEX_BUILD_HINT, RetrievalIndexNotFoundError
+from app.rag.exceptions import INDEX_BUILD_HINT, GeminiServiceUnavailableError, RetrievalIndexNotFoundError
 from app.schemas.legal_answer import LegalAnswerResponse, LegalDomain, SourceCitation
 
 
@@ -189,3 +189,31 @@ async def test_chat_returns_503_when_retrieval_indices_missing(
     detail = response.json()["detail"]
     assert "FAISS index not found" in detail
     assert INDEX_BUILD_HINT in detail
+
+
+@pytest.mark.asyncio
+async def test_chat_returns_503_when_gemini_unavailable(monkeypatch: pytest.MonkeyPatch):
+    """Exhausted Gemini retries must return a clear 503 with a user-friendly message."""
+    _authorize_as()
+    monkeypatch.setattr(
+        "app.services.chat_service.handle_chat_request",
+        AsyncMock(
+            side_effect=GeminiServiceUnavailableError(
+                "Our AI service is temporarily busy. Please try again in a moment.",
+                model="gemini-3.5-flash",
+                attempts=5,
+            )
+        ),
+    )
+    monkeypatch.setattr(chat_route, "log_query", MagicMock())
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            "/api/v1/chat",
+            headers={"Authorization": "Bearer valid-token"},
+            json={"query": "What is theft?", "user_type": "layperson"},
+        )
+
+    assert response.status_code == 503
+    assert "temporarily busy" in response.json()["detail"].lower()

@@ -60,6 +60,33 @@ def reset_redis_client() -> None:
     _redis_client = None
 
 
+async def ping_redis(*, timeout: float = 0.5) -> bool:
+    """Return True if Redis accepts a PING within *timeout* seconds.
+
+    Uses a short-lived client (not the cache singleton) so a health probe
+    never poisons or closes the shared connection used by request caching.
+    """
+    client = None
+    try:
+        client = aioredis.from_url(
+            settings.redis_url,
+            decode_responses=True,
+            socket_connect_timeout=timeout,
+            socket_timeout=timeout,
+        )
+        return bool(await client.ping())
+    except Exception as exc:
+        logger.warning(
+            "Redis health PING failed (%s): %s",
+            type(exc).__name__,
+            exc,
+        )
+        return False
+    finally:
+        if client is not None:
+            await client.aclose()
+
+
 def _embed_query(query: str, embedding_model: Embeddings | None = None) -> list[float]:
     model = embedding_model or get_embedding_model()
     return model.embed_query(query)

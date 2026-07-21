@@ -59,6 +59,29 @@
     --confidence-mid-bg: #efe6d4;
     --confidence-low-fg: #7a3535;
     --confidence-low-bg: #f0e4e4;
+
+    /* Domain chips — cream-panel contrast (see DomainBadge) */
+    --domain-criminal-bg: #efe6e6;
+    --domain-criminal-fg: #5e3538;
+    --domain-criminal-border: #e0d2d2;
+    --domain-civil-bg: #e7e9ee;
+    --domain-civil-fg: #3a4154;
+    --domain-civil-border: #d0d4de;
+    --domain-family-bg: #ece7ec;
+    --domain-family-fg: #4f3c4f;
+    --domain-family-border: #d8d0d8;
+    --domain-labour-bg: #e6ece8;
+    --domain-labour-fg: #355040;
+    --domain-labour-border: #cfd8d2;
+    --domain-consumer-bg: #efe8da;
+    --domain-consumer-fg: #6f5528;
+    --domain-consumer-border: #e0d6c0;
+    --domain-property-bg: #ebe7e1;
+    --domain-property-fg: #4f4c46;
+    --domain-property-border: #d8d2ca;
+    --domain-other-bg: #e8e4de;
+    --domain-other-fg: #5c5a54;
+    --domain-other-border: #d9d2c6;
   }
 
   * {
@@ -74,6 +97,33 @@
     background-color: var(--bg-shell);
     color: var(--ink-primary);
   }
+}
+
+/*
+ * Audience selector — Tailwind data-[state=on] variants are not reliably
+ * emitted in this Next dev setup, so selected/unselected styles are explicit.
+ * Placed outside @layer so these rules win over shadcn toggle utility classes.
+ */
+button.audience-option {
+  color: var(--ink-muted);
+  background-color: transparent;
+  font-weight: 500;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+button.audience-option:hover:not([data-selected="true"]) {
+  color: var(--ink-primary);
+  background-color: rgb(255 255 255 / 4%);
+}
+
+button.audience-option[data-selected="true"] {
+  background-color: var(--accent-amber);
+  color: #14161a;
+  font-weight: 600;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 18%) inset;
 }
 
 @layer utilities {
@@ -92,6 +142,53 @@
 
   .bg-surface-soft {
     background-color: var(--bg-surface-soft);
+  }
+
+  /*
+   * Domain badges sit on cream panels but inherit shell body text unless
+   * colors are set explicitly (Tailwind arbitrary classes in lib/ are not
+   * reliably emitted). Match ConfidenceBadge: solid fill + readable fg.
+   */
+  .domain-badge {
+    background-color: var(--domain-other-bg);
+    color: var(--domain-other-fg);
+    border-color: var(--domain-other-border);
+  }
+
+  .domain-badge[data-domain="criminal"] {
+    background-color: var(--domain-criminal-bg);
+    color: var(--domain-criminal-fg);
+    border-color: var(--domain-criminal-border);
+  }
+
+  .domain-badge[data-domain="civil"] {
+    background-color: var(--domain-civil-bg);
+    color: var(--domain-civil-fg);
+    border-color: var(--domain-civil-border);
+  }
+
+  .domain-badge[data-domain="family"] {
+    background-color: var(--domain-family-bg);
+    color: var(--domain-family-fg);
+    border-color: var(--domain-family-border);
+  }
+
+  .domain-badge[data-domain="labour"] {
+    background-color: var(--domain-labour-bg);
+    color: var(--domain-labour-fg);
+    border-color: var(--domain-labour-border);
+  }
+
+  .domain-badge[data-domain="consumer"] {
+    background-color: var(--domain-consumer-bg);
+    color: var(--domain-consumer-fg);
+    border-color: var(--domain-consumer-border);
+  }
+
+  .domain-badge[data-domain="property"] {
+    background-color: var(--domain-property-bg);
+    color: var(--domain-property-fg);
+    border-color: var(--domain-property-border);
   }
 
   .font-display {

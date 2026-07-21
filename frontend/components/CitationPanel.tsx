@@ -6,6 +6,7 @@ import ConfidenceBadge from "@/components/ConfidenceBadge";
 import DomainBadge from "@/components/DomainBadge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { SourceCitation } from "@/lib/types";
 
 export interface CitationPanelProps {
@@ -13,6 +14,7 @@ export interface CitationPanelProps {
   confidenceScore?: number;
   legalDomain?: string;
   isRefusal?: boolean;
+  isLoading?: boolean;
 }
 
 export default function CitationPanel({
@@ -20,6 +22,7 @@ export default function CitationPanel({
   confidenceScore,
   legalDomain,
   isRefusal,
+  isLoading = false,
 }: CitationPanelProps) {
   return (
     <aside
@@ -52,7 +55,13 @@ export default function CitationPanel({
         )}
       </div>
 
-      {citations.length === 0 ? (
+      {isLoading ? (
+        <div className="flex flex-1 flex-col gap-3 px-5 py-8" aria-busy="true">
+          <Skeleton className="h-4 w-3/4 bg-[var(--border-cream)]" />
+          <Skeleton className="h-16 w-full bg-[var(--border-cream)]" />
+          <Skeleton className="h-16 w-full bg-[var(--border-cream)]" />
+        </div>
+      ) : citations.length === 0 ? (
         <div className="flex flex-1 items-center px-5 py-8">
           <p className="text-sm leading-6 text-ink-cream-muted">
             Sources appear here after you ask a question.

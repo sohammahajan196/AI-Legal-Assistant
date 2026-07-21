@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -23,6 +24,14 @@ def _clear_dependency_overrides():
     app.dependency_overrides.clear()
     yield
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def _mock_redis_health_ping():
+    """Health must not hit a real Redis instance (testing.mdc)."""
+    with patch("app.api.routes.health.ping_redis", new_callable=AsyncMock) as mock_ping:
+        mock_ping.return_value = True
+        yield mock_ping
 
 
 def _authorize() -> None:
@@ -60,13 +69,26 @@ async def test_domains_requires_valid_auth():
 
 
 @pytest.mark.asyncio
-async def test_health_returns_200_without_bearer_token():
+async def test_health_returns_200_without_bearer_token(_mock_redis_health_ping):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.get("/api/v1/health")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    assert response.json() == {"status": "ok", "redis": "ok"}
+    _mock_redis_health_ping.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_health_reports_degraded_when_redis_unavailable(_mock_redis_health_ping):
+    _mock_redis_health_ping.return_value = False
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/api/v1/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "degraded", "redis": "unavailable"}
 
 
 @pytest.mark.asyncio

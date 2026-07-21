@@ -3,18 +3,24 @@
  */
 "use client";
 
+import type { UserType } from "@/components/UserTypeSelector";
+import { AUDIENCE_UI_COPY } from "@/lib/audience";
 import { EXAMPLE_PROMPTS, getDomainLabel } from "@/lib/domain";
 import { Button } from "@/components/ui/button";
 
 export interface EmptyStateProps {
+  userType: UserType;
   onSelectPrompt: (prompt: string) => void;
 }
 
-export default function EmptyState({ onSelectPrompt }: EmptyStateProps) {
+export default function EmptyState({
+  userType,
+  onSelectPrompt,
+}: EmptyStateProps) {
   return (
     <div className="flex flex-col px-0.5 py-1" data-testid="empty-state">
       <p className="text-sm text-ink-cream-muted">
-        Start with a question, or choose an example.
+        {AUDIENCE_UI_COPY[userType].emptyIntro}
       </p>
 
       <div className="mt-3 grid w-full gap-2 sm:grid-cols-2">

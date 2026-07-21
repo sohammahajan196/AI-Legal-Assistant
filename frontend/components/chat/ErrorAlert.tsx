@@ -20,9 +20,17 @@ export default function ErrorAlert({
   onRetry,
 }: ErrorAlertProps) {
   const isRateLimited = status === 429;
+  const isServiceBusy = status === 503;
   const displayMessage = isRateLimited
     ? "Rate limit reached — please wait before sending another question."
-    : message;
+    : isServiceBusy
+      ? "Our AI service is temporarily busy. Please try again in a moment."
+      : message;
+  const title = isRateLimited
+    ? "Too many requests"
+    : isServiceBusy
+      ? "Service temporarily busy"
+      : "Something went wrong";
 
   return (
     <Alert
@@ -31,7 +39,7 @@ export default function ErrorAlert({
       className="mb-4 border border-[var(--border-cream)] bg-[var(--confidence-low-bg)] text-[var(--confidence-low-fg)]"
     >
       <AlertCircle className="h-4 w-4" />
-      <AlertTitle>{isRateLimited ? "Too many requests" : "Something went wrong"}</AlertTitle>
+      <AlertTitle>{title}</AlertTitle>
       <AlertDescription className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <span>{displayMessage}</span>
         {onRetry ? (

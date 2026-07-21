@@ -134,3 +134,22 @@ def test_tier_limits_are_loaded_from_settings_not_hardcoded(rate_limit_settings:
     assert get_requests_per_minute_for_tier("standard") == 2
     assert get_requests_per_minute_for_tier("premium") == 5
     assert get_requests_per_minute_for_tier("unknown") == rate_limit_settings.rate_limit_per_minute
+
+
+def test_create_limiter_falls_back_to_memory_when_redis_unreachable(rate_limit_settings, caplog):
+    with patch("app.core.rate_limit._check_redis_reachable", return_value=False):
+        with caplog.at_level("WARNING"):
+            limiter = create_limiter(storage_uri="redis://localhost:6379/0")
+
+    storage_uri = getattr(limiter, "_storage_uri", None) or getattr(limiter, "storage_uri", "")
+    assert "memory" in str(storage_uri)
+    assert any("falling back to in-memory storage" in record.message for record in caplog.records)
+
+
+def test_create_limiter_skips_reachability_probe_for_memory_uri(rate_limit_settings):
+    with patch("app.core.rate_limit._check_redis_reachable") as check:
+        limiter = create_limiter(storage_uri="memory://")
+
+    check.assert_not_called()
+    storage_uri = getattr(limiter, "_storage_uri", None) or getattr(limiter, "storage_uri", "")
+    assert "memory" in str(storage_uri)

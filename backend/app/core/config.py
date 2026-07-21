@@ -43,12 +43,36 @@ class Settings(BaseSettings):
         ...,
         description="Gemini API key (required). Set in a .env file - see .env.example.",
     )
-    gemini_model: str = "gemini-2.5-flash"
+    # Default must stay on a model available to new Gemini API keys.
+    # gemini-2.5-flash returns 404 NOT_FOUND for new users (migrate to 3.5).
+    gemini_model: str = "gemini-3.5-flash"
     gemini_temperature: float = Field(
         default=0.0,
         ge=0.0,
         le=2.0,
         description="Sampling temperature for Gemini generation (0 = deterministic).",
+    )
+    gemini_max_retries: int = Field(
+        default=4,
+        ge=0,
+        le=10,
+        description=(
+            "Max retry attempts on Gemini 503/UNAVAILABLE (exponential backoff "
+            "with jitter; 4 => up to 5 total attempts including the first call)."
+        ),
+    )
+    gemini_retry_base_delay_seconds: float = Field(
+        default=1.0,
+        gt=0.0,
+        le=60.0,
+        description="Base delay (seconds) for Gemini retry backoff: 1s, 2s, 4s, 8s, …",
+    )
+    gemini_fallback_model: str = Field(
+        default="",
+        description=(
+            "Optional secondary Gemini model (e.g. gemini-2.5-flash). When set, "
+            "used after the primary model exhausts retries on 503/UNAVAILABLE."
+        ),
     )
 
     # Auth

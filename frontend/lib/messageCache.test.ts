@@ -5,12 +5,13 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   cacheAssistantMeta,
+  clearMessageCache,
   getCachedAssistantMeta,
 } from "./messageCache";
 
 describe("messageCache", () => {
   beforeEach(() => {
-    sessionStorage.clear();
+    clearMessageCache();
   });
 
   it("stores and retrieves assistant metadata by content", () => {

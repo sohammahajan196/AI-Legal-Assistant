@@ -25,29 +25,19 @@ export const DOMAIN_LABELS: Record<LegalDomainValue, string> = {
   other: "Other",
 };
 
-/** Flat, muted chip styles for cream panels. */
-export const DOMAIN_CHIP_STYLES: Record<LegalDomainValue, string> = {
-  criminal: "bg-[#efe6e6] text-[#5e3538] border-[#e0d2d2]",
-  civil: "bg-[#e7e9ee] text-[#3a4154] border-[#d0d4de]",
-  family: "bg-[#ece7ec] text-[#4f3c4f] border-[#d8d0d8]",
-  labour: "bg-[#e6ece8] text-[#355040] border-[#cfd8d2]",
-  consumer: "bg-[#efe8da] text-[#6f5528] border-[#e0d6c0]",
-  property: "bg-[#ebe7e1] text-[#4f4c46] border-[#d8d2ca]",
-  other: "bg-[#e8e4de] text-[#5c5a54] border-[#d9d2c6]",
-};
+/** `data-domain` key for `.domain-badge` CSS in globals.css. */
+export function getDomainBadgeKey(domain: string): LegalDomainValue | "other" {
+  if (domain in DOMAIN_LABELS) {
+    return domain as LegalDomainValue;
+  }
+  return "other";
+}
 
 export function getDomainLabel(domain: string): string {
   if (domain in DOMAIN_LABELS) {
     return DOMAIN_LABELS[domain as LegalDomainValue];
   }
   return domain;
-}
-
-export function getDomainChipStyle(domain: string): string {
-  if (domain in DOMAIN_CHIP_STYLES) {
-    return DOMAIN_CHIP_STYLES[domain as LegalDomainValue];
-  }
-  return DOMAIN_CHIP_STYLES.other;
 }
 
 /** Example prompt chips for empty state — keyed by domain. */

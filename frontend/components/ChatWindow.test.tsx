@@ -8,7 +8,6 @@ import ChatWindow from "./ChatWindow";
 import {
   ApiClientError,
   fetchBackendHealth,
-  fetchSessionHistory,
   sendChatMessage,
 } from "@/lib/apiClient";
 
@@ -19,16 +18,25 @@ vi.mock("@/lib/apiClient", async () => {
   return {
     ...actual,
     sendChatMessage: vi.fn(),
-    fetchSessionHistory: vi.fn(),
     fetchBackendHealth: vi.fn(),
   };
 });
 
-vi.mock("@/lib/sessionStorage", () => ({
-  getOrCreateSessionId: vi.fn(() => "session-test-id"),
-  getStoredSessionId: vi.fn(() => "session-test-id"),
-  clearStoredSessionId: vi.fn(),
+vi.mock("@/lib/sessionId", () => ({
+  createSessionId: vi.fn(() => "session-test-id"),
 }));
+
+vi.mock("@/lib/audience", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/audience")>(
+    "@/lib/audience"
+  );
+  return {
+    ...actual,
+    navigateWithAudience: vi.fn(),
+  };
+});
+
+import { navigateWithAudience } from "@/lib/audience";
 
 const SAMPLE_RESPONSE = {
   answer: "Theft is punishable under Section 379 IPC.",
@@ -64,10 +72,8 @@ function readLastOutgoingPayload() {
 describe("ChatWindow consent wiring", () => {
   beforeEach(() => {
     vi.mocked(fetchBackendHealth).mockReset();
-    vi.mocked(fetchSessionHistory).mockReset();
     vi.mocked(sendChatMessage).mockReset();
     vi.mocked(fetchBackendHealth).mockResolvedValue(HEALTHY);
-    vi.mocked(fetchSessionHistory).mockResolvedValue([]);
     vi.mocked(sendChatMessage).mockResolvedValue(SAMPLE_RESPONSE);
   });
 
@@ -110,10 +116,9 @@ describe("ChatWindow consent wiring", () => {
 describe("ChatWindow user_type wiring", () => {
   beforeEach(() => {
     vi.mocked(fetchBackendHealth).mockReset();
-    vi.mocked(fetchSessionHistory).mockReset();
     vi.mocked(sendChatMessage).mockReset();
+    vi.mocked(navigateWithAudience).mockReset();
     vi.mocked(fetchBackendHealth).mockResolvedValue(HEALTHY);
-    vi.mocked(fetchSessionHistory).mockResolvedValue([]);
     vi.mocked(sendChatMessage).mockResolvedValue(SAMPLE_RESPONSE);
   });
 
@@ -134,14 +139,11 @@ describe("ChatWindow user_type wiring", () => {
   });
 
   it("includes the selected user_type in the outgoing payload", async () => {
-    render(<ChatWindow />);
+    render(<ChatWindow initialUserType="law_student" />);
     await waitFor(() =>
       expect(screen.queryByText("Loading conversation...")).not.toBeInTheDocument()
     );
 
-    fireEvent.change(screen.getByTestId("user-type-select"), {
-      target: { value: "law_student" },
-    });
     fireEvent.change(screen.getByLabelText("Your message"), {
       target: { value: "Explain Section 302 IPC." },
     });
@@ -153,15 +155,96 @@ describe("ChatWindow user_type wiring", () => {
     expect(payload.user_type).toBe("law_student");
     expect(payload.query).toBe("Explain Section 302 IPC.");
   });
+
+  it("updates the URL when the audience changes without a question", async () => {
+    render(<ChatWindow initialUserType="layperson" />);
+    await waitFor(() =>
+      expect(screen.queryByText("Loading conversation...")).not.toBeInTheDocument()
+    );
+
+    fireEvent.change(screen.getByTestId("user-type-select"), {
+      target: { value: "lawyer" },
+    });
+
+    expect(navigateWithAudience).toHaveBeenCalledWith("lawyer");
+    expect(sendChatMessage).not.toHaveBeenCalled();
+    expect(screen.getByTestId("empty-state")).toBeInTheDocument();
+  });
+
+  it("re-fetches the last question when audience changes after a reply", async () => {
+    vi.mocked(sendChatMessage).mockResolvedValueOnce(SAMPLE_RESPONSE);
+    vi.mocked(sendChatMessage).mockResolvedValueOnce({
+      ...SAMPLE_RESPONSE,
+      answer: "Lawyer-focused answer on Section 379 IPC.",
+    });
+
+    render(<ChatWindow initialUserType="layperson" />);
+    await waitFor(() =>
+      expect(screen.queryByText("Loading conversation...")).not.toBeInTheDocument()
+    );
+
+    fireEvent.change(screen.getByLabelText("Your message"), {
+      target: { value: "What is theft?" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() =>
+      expect(screen.getByText(SAMPLE_RESPONSE.answer)).toBeInTheDocument()
+    );
+
+    fireEvent.change(screen.getByTestId("user-type-select"), {
+      target: { value: "lawyer" },
+    });
+
+    await waitFor(() => expect(sendChatMessage).toHaveBeenCalledTimes(2));
+
+    expect(sendChatMessage).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        query: "What is theft?",
+        userType: "lawyer",
+      })
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("Lawyer-focused answer on Section 379 IPC.")
+      ).toBeInTheDocument()
+    );
+
+    expect(screen.queryByTestId("empty-state")).not.toBeInTheDocument();
+    expect(screen.getByText("What is theft?")).toBeInTheDocument();
+  });
+
+  it("does not reload when re-selecting the current audience", async () => {
+    render(<ChatWindow initialUserType="lawyer" />);
+    await waitFor(() =>
+      expect(screen.queryByText("Loading conversation...")).not.toBeInTheDocument()
+    );
+
+    fireEvent.change(screen.getByTestId("user-type-select"), {
+      target: { value: "lawyer" },
+    });
+
+    expect(navigateWithAudience).not.toHaveBeenCalled();
+  });
+
+  it("shows audience-specific empty-state copy", async () => {
+    render(<ChatWindow initialUserType="lawyer" />);
+    await waitFor(() =>
+      expect(screen.queryByText("Loading conversation...")).not.toBeInTheDocument()
+    );
+
+    expect(
+      screen.getByText(/Query a provision or issue directly/i)
+    ).toBeInTheDocument();
+  });
 });
 
 describe("ChatWindow backend wiring", () => {
   beforeEach(() => {
     vi.mocked(fetchBackendHealth).mockReset();
-    vi.mocked(fetchSessionHistory).mockReset();
     vi.mocked(sendChatMessage).mockReset();
     vi.mocked(fetchBackendHealth).mockResolvedValue(HEALTHY);
-    vi.mocked(fetchSessionHistory).mockResolvedValue([]);
     vi.mocked(sendChatMessage).mockResolvedValue(SAMPLE_RESPONSE);
   });
 
@@ -187,20 +270,14 @@ describe("ChatWindow backend wiring", () => {
     expect(screen.getByText(SAMPLE_RESPONSE.disclaimer)).toBeInTheDocument();
   });
 
-  it("loads prior session history on mount", async () => {
-    vi.mocked(fetchSessionHistory).mockResolvedValue([
-      { role: "user", content: "What is theft?" },
-      { role: "assistant", content: "Theft is under Section 379 IPC." },
-    ]);
-
+  it("starts with an empty desk on mount", async () => {
     render(<ChatWindow />);
 
     await waitFor(() =>
-      expect(screen.getByText("What is theft?")).toBeInTheDocument()
+      expect(screen.queryByText("Loading conversation...")).not.toBeInTheDocument()
     );
-    expect(screen.getByText("Theft is under Section 379 IPC.")).toBeInTheDocument();
+    expect(screen.getByTestId("empty-state")).toBeInTheDocument();
     expect(fetchBackendHealth).toHaveBeenCalled();
-    expect(fetchSessionHistory).toHaveBeenCalledWith("session-test-id");
   });
 
   it("surfaces backend health failures on mount before chat", async () => {
@@ -215,7 +292,6 @@ describe("ChatWindow backend wiring", () => {
         "Backend unavailable"
       )
     );
-    expect(fetchSessionHistory).not.toHaveBeenCalled();
     expect(screen.getByTestId("empty-state")).toBeInTheDocument();
   });
 
@@ -238,22 +314,6 @@ describe("ChatWindow backend wiring", () => {
       expect(screen.getByTestId("chat-error")).toHaveTextContent(
         "Backend unavailable"
       )
-    );
-  });
-
-  it("leaves the empty desk usable when history fails to load", async () => {
-    vi.mocked(fetchSessionHistory).mockRejectedValue(
-      new ApiClientError("Backend proxy is not configured", 503)
-    );
-
-    render(<ChatWindow />);
-
-    await waitFor(() =>
-      expect(screen.queryByText("Loading conversation...")).not.toBeInTheDocument()
-    );
-    expect(screen.getByTestId("empty-state")).toBeInTheDocument();
-    expect(screen.getByTestId("chat-error")).toHaveTextContent(
-      "Backend proxy is not configured"
     );
   });
 });

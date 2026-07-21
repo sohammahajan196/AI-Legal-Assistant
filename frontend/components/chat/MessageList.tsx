@@ -5,6 +5,7 @@
 
 import { RefObject } from "react";
 
+import type { UserType } from "@/components/UserTypeSelector";
 import MessageBubble from "@/components/chat/MessageBubble";
 import EmptyState from "@/components/chat/EmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,6 +24,7 @@ export interface ChatMessageView {
 
 export interface MessageListProps {
   messages: ChatMessageView[];
+  userType: UserType;
   isLoadingHistory: boolean;
   isSending: boolean;
   listRef: RefObject<HTMLDivElement | null>;
@@ -31,6 +33,7 @@ export interface MessageListProps {
 
 export default function MessageList({
   messages,
+  userType,
   isLoadingHistory,
   isSending,
   listRef,
@@ -52,7 +55,7 @@ export default function MessageList({
           </p>
         </div>
       ) : messages.length === 0 ? (
-        <EmptyState onSelectPrompt={onSelectPrompt} />
+        <EmptyState userType={userType} onSelectPrompt={onSelectPrompt} />
       ) : (
         <>
           {messages.map((message) => (

@@ -3,6 +3,7 @@
  */
 import ConfidenceBadge from "@/components/ConfidenceBadge";
 import DomainBadge from "@/components/DomainBadge";
+import MarkdownContent from "@/components/chat/MarkdownContent";
 import RefusalBlock from "@/components/RefusalBlock";
 import SourcesAccordion from "@/components/chat/SourcesAccordion";
 import type { SourceCitation } from "@/lib/types";
@@ -48,7 +49,7 @@ export default function AssistantMessage({
 
       {isRefusal ? <RefusalBlock /> : null}
 
-      <p className="whitespace-pre-wrap break-words">{content}</p>
+      <MarkdownContent content={content} />
 
       {citations.length > 0 ? (
         <SourcesAccordion citations={citations} defaultOpen />

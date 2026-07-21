@@ -15,6 +15,7 @@ import pytest
 from langchain_core.messages import HumanMessage, SystemMessage
 from pydantic import ValidationError
 
+from app.rag.gemini_retry import GeminiServiceUnavailableError
 from app.rag.structured_llm import (
     StructuredOutputGenerationError,
     generate_structured_answer,
@@ -227,7 +228,7 @@ async def test_retries_transient_503_then_succeeds():
     structured_llm.ainvoke = AsyncMock(side_effect=[transient, valid_result])
     llm = _mock_llm_with_structured_llm(structured_llm)
 
-    with patch("app.rag.structured_llm.asyncio.sleep", new_callable=AsyncMock) as sleep:
+    with patch("app.rag.gemini_retry.asyncio.sleep", new_callable=AsyncMock) as sleep:
         result = await generate_structured_answer(llm, "What is theft?", LLMStructuredAnswer)
 
     assert result is valid_result
@@ -236,8 +237,8 @@ async def test_retries_transient_503_then_succeeds():
 
 
 @pytest.mark.asyncio
-async def test_exhausts_transient_503_retries_and_reraises():
-    """Persistent 503 after transient retries is re-raised (not swallowed)."""
+async def test_exhausts_transient_503_retries_and_raises_service_unavailable():
+    """Persistent 503 after transient retries raises GeminiServiceUnavailableError."""
     transient = _FakeServerError(
         "503 UNAVAILABLE. This model is currently experiencing high demand."
     )
@@ -245,9 +246,14 @@ async def test_exhausts_transient_503_retries_and_reraises():
     structured_llm.ainvoke = AsyncMock(side_effect=transient)
     llm = _mock_llm_with_structured_llm(structured_llm)
 
-    with patch("app.rag.structured_llm.asyncio.sleep", new_callable=AsyncMock):
-        with pytest.raises(_FakeServerError):
-            await generate_structured_answer(llm, "What is theft?", LLMStructuredAnswer)
+    with patch("app.rag.gemini_retry.asyncio.sleep", new_callable=AsyncMock):
+        with patch("app.rag.gemini_retry.settings") as mock_settings:
+            mock_settings.gemini_model = "gemini-3.5-flash"
+            mock_settings.gemini_max_retries = 2
+            mock_settings.gemini_retry_base_delay_seconds = 1.0
+            mock_settings.gemini_fallback_model = ""
+            with pytest.raises(GeminiServiceUnavailableError):
+                await generate_structured_answer(llm, "What is theft?", LLMStructuredAnswer)
 
     # initial attempt + 2 transient retries
     assert structured_llm.ainvoke.await_count == 3

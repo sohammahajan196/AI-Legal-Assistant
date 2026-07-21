@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import fakeredis.aioredis
 import pytest
@@ -13,6 +13,7 @@ from app.core.config import Settings
 from app.rag.cache import (
     get_cached_response,
     normalize_query,
+    ping_redis,
     reset_redis_client,
     set_cached_response,
 )
@@ -183,6 +184,31 @@ async def test_set_cached_response_does_not_raise_when_redis_unreachable(test_se
             await set_cached_response("What is theft?", "layperson", SAMPLE_RESPONSE)
 
     assert any("Cache store failed" in record.message for record in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_ping_redis_returns_true_when_ping_succeeds(test_settings):
+    fake_client = AsyncMock()
+    fake_client.ping = AsyncMock(return_value=True)
+    fake_client.aclose = AsyncMock()
+
+    with patch("app.rag.cache.aioredis.from_url", return_value=fake_client):
+        assert await ping_redis() is True
+
+    fake_client.ping.assert_awaited_once()
+    fake_client.aclose.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_ping_redis_returns_false_when_unreachable(test_settings, caplog):
+    with patch(
+        "app.rag.cache.aioredis.from_url",
+        side_effect=ConnectionError("Redis unreachable"),
+    ):
+        with caplog.at_level("WARNING"):
+            assert await ping_redis() is False
+
+    assert any("Redis health PING failed" in record.message for record in caplog.records)
 
 
 # --- helpers ------------------------------------------------------------------

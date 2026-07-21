@@ -15,10 +15,13 @@ from app.core.config import settings
 
 def _build_llm(*, model_name: str, temperature: float, google_api_key: str) -> ChatGoogleGenerativeAI:
     """Construct a Gemini chat client from explicit configuration values."""
+    # max_retries=1 disables the google-genai SDK's built-in retry loop so
+    # app.rag.gemini_retry controls backoff and attempt limits explicitly.
     return ChatGoogleGenerativeAI(
         model=model_name,
         google_api_key=google_api_key,
         temperature=temperature,
+        max_retries=1,
     )
 
 
@@ -40,6 +43,14 @@ def get_llm(model_name: str | None = None, temperature: float | None = None) -> 
         temperature=resolved_temperature,
         google_api_key=settings.google_api_key.get_secret_value(),
     )
+
+
+def get_fallback_llm() -> ChatGoogleGenerativeAI | None:
+    """Return a fallback Gemini client when ``settings.gemini_fallback_model`` is set."""
+    fallback_model = settings.gemini_fallback_model.strip()
+    if not fallback_model or fallback_model == settings.gemini_model:
+        return None
+    return get_llm(model_name=fallback_model)
 
 
 def reset_llm_cache() -> None:

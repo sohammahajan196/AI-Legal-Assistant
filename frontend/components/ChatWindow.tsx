@@ -25,27 +25,30 @@ import {
 import {
   ApiClientError,
   fetchBackendHealth,
-  fetchSessionHistory,
   sendChatMessage,
 } from "@/lib/apiClient";
+import { AUDIENCE_UI_COPY, navigateWithAudience } from "@/lib/audience";
 import {
   buildChatRequestPayload,
   type ChatApiRequestBody,
 } from "@/lib/chatPayload";
-import {
-  cacheAssistantMeta,
-  getCachedAssistantMeta,
-} from "@/lib/messageCache";
-import { getOrCreateSessionId } from "@/lib/sessionStorage";
+import { cacheAssistantMeta } from "@/lib/messageCache";
+import { createSessionId } from "@/lib/sessionId";
 import type { SourceCitation } from "@/lib/types";
 
 type ChatMessage = ChatMessageView;
 
-export default function ChatWindow() {
+export interface ChatWindowProps {
+  initialUserType?: UserType;
+}
+
+export default function ChatWindow({
+  initialUserType = DEFAULT_USER_TYPE,
+}: ChatWindowProps) {
+  const [userType, setUserType] = useState(initialUserType);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [consentToLog, setConsentToLog] = useState(DEFAULT_CONSENT_TO_LOG);
-  const [userType, setUserType] = useState<UserType>(DEFAULT_USER_TYPE);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [isSending, setIsSending] = useState(false);
@@ -73,8 +76,7 @@ export default function ChatWindow() {
 
   useEffect(() => {
     let cancelled = false;
-    const activeSessionId = getOrCreateSessionId();
-    setSessionId(activeSessionId);
+    setSessionId(createSessionId());
 
     async function boot() {
       try {
@@ -92,56 +94,6 @@ export default function ChatWindow() {
         setErrorMessage(message);
         setErrorStatus(status);
         setMessages([]);
-        setIsLoadingHistory(false);
-        return;
-      }
-
-      try {
-        const history = await fetchSessionHistory(activeSessionId);
-        if (cancelled) {
-          return;
-        }
-
-        setMessages(
-          history.map((message) => {
-            const base: ChatMessage = {
-              id: crypto.randomUUID(),
-              role: message.role,
-              content: message.content,
-            };
-            if (message.role === "assistant") {
-              const cached = getCachedAssistantMeta(message.content);
-              if (cached) {
-                return {
-                  ...base,
-                  citations: cached.citations,
-                  confidenceScore: cached.confidenceScore,
-                  legalDomain: cached.legalDomain,
-                  isRefusal: cached.isRefusal,
-                  disclaimer: cached.disclaimer,
-                };
-              }
-            }
-            return base;
-          })
-        );
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-        // New/unknown sessions and a down backend should not block the desk.
-        const status = error instanceof ApiClientError ? error.status : undefined;
-        if (status === 404) {
-          setMessages([]);
-        } else {
-          const message =
-            error instanceof ApiClientError
-              ? error.message
-              : "Unable to load previous messages.";
-          setErrorMessage(message);
-          setErrorStatus(status);
-          setMessages([]);
-        }
       } finally {
         if (!cancelled) {
           setIsLoadingHistory(false);
@@ -164,24 +116,30 @@ export default function ChatWindow() {
     };
   }, []);
 
-  async function sendWithPayload(payload: {
-    query: string;
-    sessionId: string;
-    userType: UserType;
-    consentToLog: boolean;
-  }) {
+  async function sendWithPayload(
+    payload: {
+      query: string;
+      sessionId: string;
+      userType: UserType;
+      consentToLog: boolean;
+    },
+    options: { appendUserMessage?: boolean } = {}
+  ) {
+    const { appendUserMessage = true } = options;
     const outgoingPayload = buildChatRequestPayload(payload);
     setLastOutgoingPayload(outgoingPayload);
     setErrorMessage(null);
     setErrorStatus(undefined);
     setIsSending(true);
 
-    const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
-      role: "user",
-      content: payload.query,
-    };
-    setMessages((current) => [...current, userMessage]);
+    if (appendUserMessage) {
+      const userMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: payload.query,
+      };
+      setMessages((current) => [...current, userMessage]);
+    }
 
     try {
       const response = await sendChatMessage(payload);
@@ -205,7 +163,13 @@ export default function ChatWindow() {
         disclaimer: response.disclaimer,
       });
 
-      setMessages((current) => [...current, assistantMessage]);
+      setMessages((current) => {
+        const base =
+          !appendUserMessage && current[current.length - 1]?.role === "assistant"
+            ? current.slice(0, -1)
+            : current;
+        return [...base, assistantMessage];
+      });
     } catch (error) {
       const message =
         error instanceof ApiClientError
@@ -218,6 +182,38 @@ export default function ChatWindow() {
     } finally {
       setIsSending(false);
     }
+  }
+
+  function getLastUserQuery(): string | null {
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    return lastUser?.content ?? null;
+  }
+
+  async function refetchForAudienceChange(
+    nextUserType: UserType,
+    query: string
+  ) {
+    if (!sessionId || isSending) {
+      return;
+    }
+
+    setMessages((current) => {
+      const last = current[current.length - 1];
+      if (last?.role === "assistant") {
+        return current.slice(0, -1);
+      }
+      return current;
+    });
+
+    await sendWithPayload(
+      {
+        query,
+        sessionId,
+        userType: nextUserType,
+        consentToLog,
+      },
+      { appendUserMessage: false }
+    );
   }
 
   async function handleSend() {
@@ -256,9 +252,22 @@ export default function ChatWindow() {
 
   const panelCitations: SourceCitation[] = activeAssistant?.citations ?? [];
 
+  function handleUserTypeChange(next: UserType) {
+    if (next === userType) {
+      return;
+    }
+    setUserType(next);
+    navigateWithAudience(next);
+
+    const lastQuery = getLastUserQuery();
+    if (lastQuery && sessionId) {
+      void refetchForAudienceChange(next, lastQuery);
+    }
+  }
+
   return (
     <AppShell>
-      <ChatHeader userType={userType} onUserTypeChange={setUserType} />
+      <ChatHeader userType={userType} onUserTypeChange={handleUserTypeChange} />
 
       <DisclaimerStrip
         consentToLog={consentToLog}
@@ -271,7 +280,7 @@ export default function ChatWindow() {
             Ask a legal question.
           </h1>
           <p className="max-w-sm text-sm leading-5 text-ink-muted sm:text-right">
-            Answers include citations, confidence, and source excerpts.
+            {AUDIENCE_UI_COPY[userType].pageSubtitle}
           </p>
         </div>
 
@@ -287,6 +296,7 @@ export default function ChatWindow() {
           <div className="min-w-0">
             <MessageList
               messages={messages}
+              userType={userType}
               isLoadingHistory={isLoadingHistory}
               isSending={isSending}
               listRef={messageListRef}
@@ -307,6 +317,7 @@ export default function ChatWindow() {
             confidenceScore={activeAssistant?.confidenceScore}
             legalDomain={activeAssistant?.legalDomain}
             isRefusal={activeAssistant?.isRefusal}
+            isLoading={isSending && messages.some((m) => m.role === "user")}
           />
         </div>
       </section>

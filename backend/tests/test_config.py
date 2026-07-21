@@ -14,11 +14,14 @@ def test_settings_loads_with_required_secret_present():
     settings = Settings(google_api_key="a-real-looking-key", _env_file=None)  # type: ignore[call-arg]
 
     assert settings.google_api_key.get_secret_value() == "a-real-looking-key"
-    assert settings.gemini_model == "gemini-2.5-flash"
+    assert settings.gemini_model == "gemini-3.5-flash"
     assert settings.embedding_model == "BAAI/bge-base-en-v1.5"
     assert settings.confidence_refusal_threshold == 0.4
     assert settings.confidence_caution_threshold == 0.6
     assert settings.rate_limit_per_minute == 30
+    assert settings.gemini_max_retries == 4
+    assert settings.gemini_retry_base_delay_seconds == 1.0
+    assert settings.gemini_fallback_model == ""
 
 
 def test_settings_overrides_defaults_from_env(monkeypatch: pytest.MonkeyPatch):

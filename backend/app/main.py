@@ -25,7 +25,7 @@ from starlette.responses import Response
 from app.api.routes import chat, domains, health, sessions
 from app.core.logging import configure_logging, logger
 from app.core.rate_limit import register_rate_limiting
-from app.rag.exceptions import RetrievalIndexNotFoundError
+from app.rag.exceptions import GeminiServiceUnavailableError, RetrievalIndexNotFoundError
 
 configure_logging()
 
@@ -78,6 +78,20 @@ async def retrieval_index_not_found_handler(
 ) -> JSONResponse:
     """Map missing FAISS/BM25 artifacts to a clear 503 instead of an opaque 500."""
     logger.error("Retrieval indices missing: %s", exc)
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
+@app.exception_handler(GeminiServiceUnavailableError)
+async def gemini_unavailable_handler(
+    _request: Request, exc: GeminiServiceUnavailableError
+) -> JSONResponse:
+    """Map exhausted Gemini retries to a user-friendly 503."""
+    logger.error(
+        "Gemini service unavailable (model=%s, attempts=%s): %s",
+        exc.model,
+        exc.attempts,
+        type(exc.last_error).__name__ if exc.last_error else "unknown",
+    )
     return JSONResponse(status_code=503, content={"detail": str(exc)})
 
 

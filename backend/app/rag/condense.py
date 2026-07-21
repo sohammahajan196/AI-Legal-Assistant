@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from langchain_core.prompts import ChatPromptTemplate
 
+from app.rag.gemini_retry import ainvoke_with_gemini_resilience
+
 _CONDENSE_SYSTEM_PROMPT = (
     "Given the following conversation history and a follow-up question, "
     "rewrite the follow-up question into a standalone question that "
@@ -73,6 +75,6 @@ async def condense_question(llm, question: str, history: list[dict]) -> str:
         return question
 
     messages = _CONDENSE_PROMPT.format_messages(history=_format_history(history), question=question)
-    response = await llm.ainvoke(messages)
+    response = await ainvoke_with_gemini_resilience(llm, messages, operation="condense_question")
     rewritten = _message_text(response.content)
     return rewritten or question

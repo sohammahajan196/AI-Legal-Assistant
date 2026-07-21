@@ -1,11 +1,8 @@
 /**
- * Client-side cache of assistant message metadata (citations, confidence, etc.)
- * keyed by content hash — mitigates history reload gap until the backend
- * extends the session history API.
+ * In-memory cache of assistant message metadata (citations, confidence, etc.)
+ * keyed by content hash. Cleared automatically on page refresh.
  */
 import type { SourceCitation } from "@/lib/types";
-
-const CACHE_PREFIX = "ai-legal-assistant.msg-meta.";
 
 export interface CachedAssistantMeta {
   citations: SourceCitation[];
@@ -14,6 +11,8 @@ export interface CachedAssistantMeta {
   isRefusal?: boolean;
   disclaimer?: string;
 }
+
+const cache = new Map<string, CachedAssistantMeta>();
 
 function hashContent(content: string): string {
   let hash = 0;
@@ -25,37 +24,23 @@ function hashContent(content: string): string {
 }
 
 function storageKey(content: string): string {
-  // Length materially reduces accidental collisions in the small 32-bit hash.
-  return `${CACHE_PREFIX}${content.length}.${hashContent(content)}`;
+  return `${content.length}.${hashContent(content)}`;
 }
 
 export function cacheAssistantMeta(
   content: string,
   meta: CachedAssistantMeta
 ): void {
-  if (typeof window === "undefined") {
-    return;
-  }
-  try {
-    sessionStorage.setItem(storageKey(content), JSON.stringify(meta));
-  } catch {
-    // Ignore quota / private-mode failures.
-  }
+  cache.set(storageKey(content), meta);
 }
 
 export function getCachedAssistantMeta(
   content: string
 ): CachedAssistantMeta | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-  try {
-    const raw = sessionStorage.getItem(storageKey(content));
-    if (!raw) {
-      return null;
-    }
-    return JSON.parse(raw) as CachedAssistantMeta;
-  } catch {
-    return null;
-  }
+  return cache.get(storageKey(content)) ?? null;
+}
+
+/** Test helper to reset in-memory cache state. */
+export function clearMessageCache(): void {
+  cache.clear();
 }

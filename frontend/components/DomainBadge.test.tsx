@@ -19,5 +19,6 @@ describe("DomainBadge", () => {
   it("falls back gracefully for unknown domains", () => {
     render(<DomainBadge domain="admiralty" />);
     expect(screen.getByText("admiralty")).toBeInTheDocument();
+    expect(screen.getByText("admiralty")).toHaveAttribute("data-domain", "other");
   });
 });

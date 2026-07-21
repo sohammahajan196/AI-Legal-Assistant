@@ -7,7 +7,6 @@ See PLAN.md Section 8 and TASKS.md T38.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
-
 from app.core.security import verify_bearer_token
 from app.schemas.chat import HistoryMessage, SessionHistoryResponse
 from app.services.session_store import get_history

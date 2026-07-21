@@ -239,7 +239,10 @@ async def test_session_history_round_trip(client, integration_settings, fake_red
 
 @pytest.mark.asyncio
 async def test_health_check_returns_200_without_auth(client, integration_settings):
-    response = await client.get("/api/v1/health")
+    with patch("app.api.routes.health.ping_redis", new_callable=AsyncMock) as mock_ping:
+        mock_ping.return_value = True
+        response = await client.get("/api/v1/health")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    assert response.json() == {"status": "ok", "redis": "ok"}
+    mock_ping.assert_awaited_once()

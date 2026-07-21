@@ -36,4 +36,21 @@ describe("UserTypeSelector", () => {
     expect(screen.getByRole("radio", { name: "Law student" })).toBeInTheDocument();
     expect(screen.getByRole("radio", { name: "Lawyer" })).toBeInTheDocument();
   });
+
+  it("marks only the current audience as selected for styling", () => {
+    render(<UserTypeSelector value="law_student" onChange={() => {}} />);
+
+    expect(screen.getByRole("radio", { name: "Layperson" })).toHaveAttribute(
+      "data-selected",
+      "false"
+    );
+    expect(screen.getByRole("radio", { name: "Law student" })).toHaveAttribute(
+      "data-selected",
+      "true"
+    );
+    expect(screen.getByRole("radio", { name: "Lawyer" })).toHaveAttribute(
+      "data-selected",
+      "false"
+    );
+  });
 });

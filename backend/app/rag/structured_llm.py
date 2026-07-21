@@ -6,13 +6,13 @@ See PLAN.md Sections 5-6 and TASKS.md T23.
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any, TypeVar
 
 from langchain_core.messages import BaseMessage, HumanMessage
 from pydantic import BaseModel
 
 from app.core.logging import logger
+from app.rag.gemini_retry import ainvoke_with_gemini_resilience
 
 SchemaT = TypeVar("SchemaT", bound=BaseModel)
 
@@ -21,10 +21,6 @@ REPAIR_INSTRUCTION_TEMPLATE = (
     "error. Correct your answer so it strictly matches the required JSON "
     "schema and try again.\n\nValidation error:\n{error}"
 )
-
-# Transient Gemini capacity errors (distinct from validation repair retries).
-_TRANSIENT_API_RETRIES = 2
-_TRANSIENT_API_BACKOFF_SECONDS = 1.5
 
 
 class StructuredOutputGenerationError(Exception):
@@ -51,29 +47,13 @@ def _append_repair_instruction(prompt: str | list[BaseMessage], error: Exception
     raise TypeError(f"Unsupported prompt type for repair: {type(prompt)!r}")
 
 
-def _is_transient_api_error(exc: BaseException) -> bool:
-    """True for Gemini 503 / UNAVAILABLE capacity spikes (retryable)."""
-    status = getattr(exc, "status_code", None) or getattr(exc, "code", None)
-    if status == 503:
-        return True
-    message = str(exc).upper()
-    return "503" in message and ("UNAVAILABLE" in message or "HIGH DEMAND" in message)
-
-
-async def _ainvoke_with_transient_retries(structured_llm: Any, prompt: str | list[BaseMessage]) -> Any:
-    """Call ``ainvoke``, retrying a few times on Gemini 503/UNAVAILABLE."""
-    for api_attempt in range(_TRANSIENT_API_RETRIES + 1):
-        try:
-            return await structured_llm.ainvoke(prompt)
-        except ValueError:
-            raise
-        except Exception as exc:
-            if _is_transient_api_error(exc) and api_attempt < _TRANSIENT_API_RETRIES:
-                logger.warning("Transient LLM API error; retrying (%s)", type(exc).__name__)
-                await asyncio.sleep(_TRANSIENT_API_BACKOFF_SECONDS * (api_attempt + 1))
-                continue
-            logger.exception("LLM request failed: %s", type(exc).__name__)
-            raise
+async def _ainvoke_structured_llm(structured_llm: Any, prompt: str | list[BaseMessage]) -> Any:
+    """Invoke structured output with explicit Gemini retry / fallback handling."""
+    return await ainvoke_with_gemini_resilience(
+        structured_llm,
+        prompt,
+        operation="structured_output",
+    )
 
 
 async def generate_structured_answer(
@@ -88,8 +68,8 @@ async def generate_structured_answer(
     both Pydantic's `ValidationError` and `json.JSONDecodeError`) so both
     schema-violation and malformed-JSON failures trigger the repair loop.
 
-    Separately retries transient Gemini 503/UNAVAILABLE responses a few times
-    with backoff before surfacing the error to the caller.
+    Transient Gemini 503/UNAVAILABLE responses are retried with exponential
+    backoff (see ``app.rag.gemini_retry``) before surfacing an error.
     """
     structured_llm = llm.with_structured_output(schema, method="json_schema")
 
@@ -99,7 +79,7 @@ async def generate_structured_answer(
     logger.info("LLM request started")
     for attempt in range(max_retries + 1):
         try:
-            result = await _ainvoke_with_transient_retries(structured_llm, current_prompt)
+            result = await _ainvoke_structured_llm(structured_llm, current_prompt)
             logger.info("LLM response received")
             return result
         except ValueError as exc:

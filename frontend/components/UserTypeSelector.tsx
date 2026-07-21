@@ -78,18 +78,22 @@ export default function UserTypeSelector({
               onChange(next as UserType);
             }
           }}
-          variant="outline"
+          variant="default"
           size="sm"
           className="justify-start gap-0 overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-elevated p-0.5"
           aria-label="Audience type"
         >
-          {USER_TYPE_OPTIONS.map((option) => (
+          {USER_TYPE_OPTIONS.map((option) => {
+            const isSelected = value === option.value;
+
+            return (
             <Tooltip key={option.value}>
               <TooltipTrigger asChild>
                 <ToggleGroupItem
                   value={option.value}
                   aria-label={option.label}
-                  className="min-h-9 rounded-md border-0 px-3 text-xs text-ink-muted data-[state=on]:bg-amber data-[state=on]:text-primary-foreground sm:text-sm"
+                  data-selected={isSelected ? "true" : "false"}
+                  className="audience-option min-h-9 rounded-md border-0 px-3 text-xs sm:text-sm"
                 >
                   {option.label}
                 </ToggleGroupItem>
@@ -98,7 +102,8 @@ export default function UserTypeSelector({
                 {option.hint}
               </TooltipContent>
             </Tooltip>
-          ))}
+            );
+          })}
         </ToggleGroup>
       </div>
     </TooltipProvider>

@@ -19,6 +19,20 @@ def _clear_llm_cache():
     reset_llm_cache()
 
 
+def test_build_llm_disables_sdk_retries():
+    """SDK retries must be off so app.rag.gemini_retry owns backoff policy."""
+    with patch("app.rag.llm.ChatGoogleGenerativeAI") as mock_cls:
+        from app.rag.llm import _build_llm
+
+        _build_llm(model_name="gemini-3.5-flash", temperature=0.0, google_api_key="key")
+        mock_cls.assert_called_once_with(
+            model="gemini-3.5-flash",
+            google_api_key="key",
+            temperature=0.0,
+            max_retries=1,
+        )
+
+
 def test_get_llm_uses_settings_model_and_temperature(monkeypatch: pytest.MonkeyPatch):
     """Factory must pass config-driven model name, temperature, and API key."""
     monkeypatch.setenv("GOOGLE_API_KEY", "test-google-api-key")

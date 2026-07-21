@@ -85,14 +85,54 @@ def get_rate_limit_string(key: str) -> str:
     return f"{rpm}/minute"
 
 
+def _check_redis_reachable(url: str, timeout: float = 2.0) -> bool:
+    """Return True if the Redis server at *url* accepts a PING within *timeout* seconds."""
+    client = None
+    try:
+        import redis
+
+        client = redis.Redis.from_url(url, socket_connect_timeout=timeout)
+        client.ping()
+        return True
+    except Exception as exc:
+        logger.warning(
+            "Redis reachability check failed for %s (%s): %s",
+            url,
+            type(exc).__name__,
+            exc,
+        )
+        return False
+    finally:
+        if client is not None:
+            client.close()
+
+
 def create_limiter(storage_uri: str | None = None) -> Limiter:
-    """Build a slowapi ``Limiter`` backed by Redis (or an override URI in tests)."""
+    """Build a slowapi ``Limiter`` backed by Redis (or an override URI in tests).
+
+    Falls back to pure in-memory storage when Redis is unreachable so that
+    the server can start without a running Redis instance.
+    """
+    uri = storage_uri or settings.redis_url
+    # Explicit memory:// (tests) skips the network probe; Redis URLs are verified.
+    if not uri.startswith("memory://") and not _check_redis_reachable(uri):
+        logger.warning(
+            "Redis unreachable at %s — rate limiter falling back to in-memory storage. "
+            "Cache and shared rate limits will not work until Redis is reachable; "
+            "check REDIS_URL and that Redis is running (e.g. docker compose up redis -d).",
+            uri,
+        )
+        uri = "memory://"
+    else:
+        logger.info("Rate limiter using storage: %s", uri.split("@")[-1])
     return Limiter(
         key_func=get_rate_limit_key,
-        storage_uri=storage_uri or settings.redis_url,
+        storage_uri=uri,
         in_memory_fallback_enabled=True,
         headers_enabled=True,
-        swallow_errors=False,
+        # swallow_errors: if Redis dies after startup, requests still succeed
+        # (limits may not enforce). Prefer visibility via /api/v1/health redis status.
+        swallow_errors=True,
     )
 
 
