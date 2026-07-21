@@ -196,7 +196,8 @@ async def test_chat_returns_503_when_gemini_unavailable(monkeypatch: pytest.Monk
     """Exhausted Gemini retries must return a clear 503 with a user-friendly message."""
     _authorize_as()
     monkeypatch.setattr(
-        "app.services.chat_service.handle_chat_request",
+        chat_route,
+        "handle_chat_request",
         AsyncMock(
             side_effect=GeminiServiceUnavailableError(
                 "Our AI service is temporarily busy. Please try again in a moment.",

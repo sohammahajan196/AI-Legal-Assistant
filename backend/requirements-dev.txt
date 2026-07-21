@@ -1,3 +1,8 @@
 # Development / CI tooling (install alongside requirements.txt).
 mypy==1.19.1
 ruff==0.15.0
+
+# Testing
+pytest==9.1.1
+pytest-asyncio==1.4.0
+fakeredis==2.36.2

@@ -31,7 +31,20 @@ COPY app ./app
 COPY scripts ./scripts
 COPY data/raw ./data/raw
 
-# Writable data dirs; FAISS index is persisted via a named volume at runtime.
+# Bake the retrieval index into the image itself so the backend can serve
+# traffic without a runtime volume — required on hosts with no persistent
+# disk (e.g. Render's free tier). On docker-compose, an empty named volume
+# mounted over data/faiss_index is auto-populated from this image content on
+# first `up`, so this stays compatible with the existing volume-based flow.
+# GOOGLE_API_KEY here is a build-time-only placeholder: these scripts never
+# call Gemini, they only need Settings to pass its non-blank validation. The
+# real key is supplied at runtime by the hosting platform's env vars, which
+# override this image default.
+ENV GOOGLE_API_KEY=build-time-placeholder
+RUN python scripts/ingest.py && python scripts/build_index.py
+
+# Writable data dirs; FAISS index is persisted via a named volume at runtime
+# in docker-compose (pre-populated above for volume-less hosts).
 RUN mkdir -p data/faiss_index data/bm25_index data/processed \
     && adduser --disabled-password --gecos "" appuser \
     && chown -R appuser:appuser /app

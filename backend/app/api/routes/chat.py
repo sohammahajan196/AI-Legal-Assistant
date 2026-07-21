@@ -17,6 +17,7 @@ from app.core.logging import logger
 from app.core.rate_limit import get_limiter, get_rate_limit_string
 from app.core.security import verify_bearer_token
 from app.schemas.chat import ChatRequest, ChatResponse
+from app.services.chat_service import handle_chat_request
 from app.services.query_log import log_query
 
 router = APIRouter(tags=["chat"])
@@ -48,8 +49,6 @@ async def chat(
     logger.info("Processing query")
     start = time.perf_counter()
     try:
-        from app.services.chat_service import handle_chat_request
-
         answer = await handle_chat_request(payload.query, payload.session_id, payload.user_type)
     except Exception as exc:
         logger.exception("Failed to process query: %s", type(exc).__name__)

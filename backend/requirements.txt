@@ -27,11 +27,7 @@ python-dotenv==1.2.2
 httpx==0.28.1
 pdfplumber==0.11.10
 
-# Testing
-pytest==9.1.1
-pytest-asyncio==1.4.0
-fakeredis==2.36.2
-
-# All runtime/test deps above are pinned to versions verified in the project
+# All runtime deps above are pinned to versions verified in the project
 # virtualenv (boot + pytest). Bump intentionally and re-run the suite / smoke
-# chat before merging.
+# chat before merging. Test-only deps (pytest, fakeredis, ...) live in
+# requirements-dev.txt so they don't ship in the production image.
