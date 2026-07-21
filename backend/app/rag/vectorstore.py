@@ -96,7 +96,12 @@ def chunk_to_document(chunk: LegalChunk) -> Document:
 
 
 def build_faiss_index(chunks: list[LegalChunk], embedding_model, persist_dir: str) -> None:
-    """Build a FAISS index from processed chunks and persist it to disk."""
+    """Build a FAISS index from processed chunks and persist it to disk.
+
+    Always rebuilds from scratch: existing ``index.faiss`` / ``index.pkl`` under
+    *persist_dir* are removed before writing so a prior embedding model (e.g.
+    768-d) cannot leave a stale index beside a newly built one.
+    """
     if not chunks:
         raise ValueError("Cannot build a FAISS index from an empty chunk list")
 
@@ -105,6 +110,10 @@ def build_faiss_index(chunks: list[LegalChunk], embedding_model, persist_dir: st
 
     persist_path = Path(persist_dir)
     persist_path.mkdir(parents=True, exist_ok=True)
+    for artifact_name in (FAISS_INDEX_FILE, FAISS_DOCSTORE_FILE):
+        artifact_path = persist_path / artifact_name
+        if artifact_path.exists():
+            artifact_path.unlink()
     vectorstore.save_local(str(persist_path))
 
 

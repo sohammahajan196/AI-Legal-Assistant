@@ -9,7 +9,7 @@ import pytest
 
 from app.core.config import Settings
 from app.rag.embeddings import (
-    BGE_BASE_EN_V1_5_DIMENSION,
+    BGE_SMALL_EN_V1_5_DIMENSION,
     expected_embedding_dimension,
     get_embedding_model,
     reset_embedding_model_cache,
@@ -56,30 +56,47 @@ def test_get_embedding_model_caches_per_model_name():
         sentinel = MagicMock()
         mock_cls.return_value = sentinel
 
-        first = get_embedding_model("BAAI/bge-base-en-v1.5")
-        second = get_embedding_model("BAAI/bge-base-en-v1.5")
+        first = get_embedding_model("BAAI/bge-small-en-v1.5")
+        second = get_embedding_model("BAAI/bge-small-en-v1.5")
 
     assert first is second
     mock_cls.assert_called_once()
 
 
+def test_get_embedding_model_default_and_explicit_name_share_singleton(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Default settings path and an explicit same id must not double-load."""
+    monkeypatch.setenv("GOOGLE_API_KEY", "test-google-api-key")
+    monkeypatch.setenv("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
+
+    with patch("app.rag.embeddings.settings", Settings(_env_file=None)):  # type: ignore[call-arg]
+        with patch("app.rag.embeddings.HuggingFaceEmbeddings") as mock_cls:
+            mock_cls.return_value = MagicMock()
+            via_default = get_embedding_model()
+            via_explicit = get_embedding_model("BAAI/bge-small-en-v1.5")
+
+    assert via_default is via_explicit
+    mock_cls.assert_called_once()
+
+
 def test_expected_embedding_dimension_for_default_model():
-    assert expected_embedding_dimension("BAAI/bge-base-en-v1.5") == BGE_BASE_EN_V1_5_DIMENSION
+    assert expected_embedding_dimension("BAAI/bge-small-en-v1.5") == BGE_SMALL_EN_V1_5_DIMENSION
 
 
 def test_embed_query_returns_expected_dimension():
-    """A sample sentence must embed to the bge-base-en-v1.5 vector size (768)."""
-    model = get_embedding_model("BAAI/bge-base-en-v1.5")
+    """A sample sentence must embed to the bge-small-en-v1.5 vector size (384)."""
+    model = get_embedding_model("BAAI/bge-small-en-v1.5")
     vector = model.embed_query("Section 304A deals with death by negligence.")
 
     assert isinstance(vector, list)
-    assert len(vector) == BGE_BASE_EN_V1_5_DIMENSION
+    assert len(vector) == BGE_SMALL_EN_V1_5_DIMENSION
     assert all(isinstance(value, float) for value in vector)
 
 
 def test_similar_sentences_have_higher_cosine_similarity_than_unrelated():
     """Semantically related legal phrases should score higher than unrelated text."""
-    model = get_embedding_model("BAAI/bge-base-en-v1.5")
+    model = get_embedding_model("BAAI/bge-small-en-v1.5")
 
     similar_a = "Section 304A punishes causing death by negligence."
     similar_b = "Negligent acts causing death are covered under Section 304A."

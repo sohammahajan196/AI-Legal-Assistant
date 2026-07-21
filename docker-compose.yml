@@ -9,6 +9,9 @@
 #        docker compose run --rm backend python scripts/ingest.py
 #        docker compose run --rm backend python scripts/build_index.py
 #      Or build locally under backend/ and copy artifacts into the volumes.
+#      After changing EMBEDDING_MODEL, re-run build_index.py and recreate the
+#      faiss_index volume (`docker compose down -v` then up) so an old index
+#      is not reused over the freshly baked image artifacts.
 #   3. docker compose up --build
 #
 # Chat UI: http://localhost:3000

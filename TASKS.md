@@ -114,7 +114,7 @@ Derived from [PRD.md](./PRD.md) and [PLAN.md](./PLAN.md). 54 tasks, ordered so t
 
 ### T14 — HuggingFace embedding wrapper
 **Depends on:** T03
-**Description:** Build `backend/app/rag/embeddings.py` wrapping `HuggingFaceEmbeddings` (`BAAI/bge-base-en-v1.5`) behind a config-driven factory function.
+**Description:** Build `backend/app/rag/embeddings.py` wrapping `HuggingFaceEmbeddings` (`BAAI/bge-small-en-v1.5`) behind a config-driven factory function.
 **Acceptance Criteria:**
 - `get_embedding_model()` returns a working embedder; embedding a sample sentence returns a vector of the expected dimension.
 - Model name is overridable via settings/env without code changes.

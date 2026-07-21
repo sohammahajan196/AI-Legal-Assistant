@@ -54,9 +54,17 @@ USER appuser
 EXPOSE 8000
 
 # Named volume mount point for the offline-built FAISS index (PLAN.md Section 13).
+# Recreate this volume after changing EMBEDDING_MODEL — a non-empty named volume
+# keeps the previous index and will not pick up a newly baked image layer.
 VOLUME ["/app/data/faiss_index"]
+
+# Single worker only — embedding model + FAISS already dominate RAM on
+# free-tier hosts (e.g. Render 512MB). Do not raise WEB_CONCURRENCY.
+ENV WEB_CONCURRENCY=1
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Explicit --workers 1 (uvicorn default is already 1; pin it so platforms
+# cannot silently multi-process via an alternate start command).
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

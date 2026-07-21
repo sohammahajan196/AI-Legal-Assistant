@@ -129,6 +129,32 @@ def test_build_faiss_index_writes_persisted_artifacts(
     assert (persist_dir / FAISS_DOCSTORE_FILE).is_file()
 
 
+def test_build_faiss_index_rebuild_replaces_prior_embedding_dimension(
+    tmp_path: Path,
+    fixture_chunks: list[LegalChunk],
+):
+    """A second build must replace on-disk artifacts (no stale 768-d index)."""
+    persist_dir = tmp_path / "faiss_index"
+
+    class WideEmbeddings(KeywordEmbeddings):
+        SIZE = 768
+
+    class NarrowEmbeddings(KeywordEmbeddings):
+        SIZE = 384
+
+    build_faiss_index(fixture_chunks, WideEmbeddings(), str(persist_dir))
+    wide_index = load_faiss_index(str(persist_dir), WideEmbeddings())
+    assert wide_index.index.d == 768
+
+    build_faiss_index(fixture_chunks, NarrowEmbeddings(), str(persist_dir))
+    narrow_index = load_faiss_index(str(persist_dir), NarrowEmbeddings())
+    assert narrow_index.index.d == 384
+
+    results = query_faiss_index(narrow_index, "negligence 304a", k=1)
+    assert results
+    assert results[0].section_number == "304A"
+
+
 def test_build_faiss_index_rejects_empty_chunk_list(
     tmp_path: Path,
     embedding_model: KeywordEmbeddings,

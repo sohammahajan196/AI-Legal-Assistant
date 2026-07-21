@@ -240,7 +240,7 @@ Step 3 aborts without writing indices if validation fails. On success it writes:
 - `data/faiss_index/` — semantic FAISS index
 - `data/bm25_index/` — keyword BM25 index
 
-The first FAISS build downloads `EMBEDDING_MODEL` (default `BAAI/bge-base-en-v1.5`). Paths are configurable via `FAISS_INDEX_DIR` and `BM25_INDEX_DIR` in `.env`.
+The first FAISS build downloads `EMBEDDING_MODEL` (default `BAAI/bge-small-en-v1.5`). Paths are configurable via `FAISS_INDEX_DIR` and `BM25_INDEX_DIR` in `.env`.
 
 **Maintainers only:** to regenerate raw corpus files from upstream sources, run the `backend/scripts/curate_*.py` scripts for each domain and their matching `pytest tests/test_corpus_*.py` checks.
 

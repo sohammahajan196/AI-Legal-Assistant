@@ -79,7 +79,7 @@ class Settings(BaseSettings):
     backend_api_tokens: str = ""
 
     # Embeddings
-    embedding_model: str = "BAAI/bge-base-en-v1.5"
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
 
     # Retrieval
     enable_reranker: bool = False

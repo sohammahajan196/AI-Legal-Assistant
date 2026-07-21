@@ -35,7 +35,7 @@ flowchart LR
 
 - **Chunking**: custom regex-based parser (`backend/scripts/ingest.py`) that splits each act by `Section N.` boundaries (not fixed token windows), keeping chapter/section hierarchy. Each chunk = one section (further split on sub-clauses `(1)`, `(2)` if the section is very long).
 - **Metadata per chunk**: `domain`, `act_name`, `act_year`, `chapter`, `section_number`, `section_title`, `source_citation` (e.g. "IPC 1860, S.304A"), `raw_text`.
-- **Embeddings**: HuggingFace `BAAI/bge-base-en-v1.5` (via `langchain_huggingface.HuggingFaceEmbeddings`, CPU-friendly, strong general-purpose retrieval quality) — swappable via config.
+- **Embeddings**: HuggingFace `BAAI/bge-small-en-v1.5` (via `langchain_huggingface.HuggingFaceEmbeddings`, CPU-friendly, strong general-purpose retrieval quality) — swappable via config.
 - **Vector store**: single FAISS index (`langchain_community.vectorstores.FAISS`) covering all domains, with `domain` stored in metadata so retrieval can apply a metadata `filter` when a domain is known/pre-classified. Index persisted to `backend/data/faiss_index/` and mounted as a Docker volume.
 - Ingestion is an **offline CLI script**, not an API endpoint (safer for MVP — avoids exposing index rebuild over HTTP).
 

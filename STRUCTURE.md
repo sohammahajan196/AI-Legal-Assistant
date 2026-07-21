@@ -160,7 +160,7 @@ Exists as its own layer so HTTP concerns (status codes, request/response shapes)
 This is the heart of the system — every module maps directly to a pipeline stage in PLAN.md §3-§7:
 
 - **`chunking.py`** — section-boundary regex parser + metadata extractor; turns raw act text into citable chunks (T11).
-- **`embeddings.py`** — HuggingFace embedding model wrapper (`BAAI/bge-base-en-v1.5`) (T14).
+- **`embeddings.py`** — HuggingFace embedding model wrapper (`BAAI/bge-small-en-v1.5`) (T14).
 - **`vectorstore.py`** — FAISS index build/query, domain-filterable (T15).
 - **`bm25_index.py`** — BM25 keyword index build/query (T16).
 - **`hybrid_retriever.py`** — `EnsembleRetriever` combining FAISS + BM25 via Reciprocal Rank Fusion (T18).

@@ -14,6 +14,17 @@ time with a clear pydantic validation error, rather than booting silently
 and failing later inside a request (see TASKS.md T03).
 """
 
+# Limit tokenizer / BLAS / torch thread pools before HuggingFace or embedding
+# stacks are imported (route imports pull langchain_huggingface → torch).
+import os
+
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+os.environ["OMP_NUM_THREADS"] = "1"
+
+import torch
+
+torch.set_num_threads(1)
+
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
