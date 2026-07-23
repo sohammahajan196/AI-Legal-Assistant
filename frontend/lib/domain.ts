@@ -44,7 +44,7 @@ export function getDomainLabel(domain: string): string {
 export const EXAMPLE_PROMPTS: Array<{ domain: LegalDomainValue; prompt: string }> = [
   {
     domain: "property",
-    prompt: "What can I do if my landlord won't return my security deposit?",
+    prompt: "What are the essential elements of a valid sale of immovable property?",
   },
   {
     domain: "criminal",
@@ -64,6 +64,6 @@ export const EXAMPLE_PROMPTS: Array<{ domain: LegalDomainValue; prompt: string }
   },
   {
     domain: "civil",
-    prompt: "What is the limitation period for a suit for recovery of money?",
+    prompt: "What is the procedure for filing a civil suit under CPC?",
   },
 ];

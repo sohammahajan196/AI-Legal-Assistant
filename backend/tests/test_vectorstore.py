@@ -109,6 +109,7 @@ def test_chunk_to_document_preserves_citation_metadata(fixture_chunks: list[Lega
     document = chunk_to_document(fixture_chunks[0])
 
     assert "Section 304A." in document.page_content
+    assert "Indian Penal Code" in document.page_content
     assert "IPC 1860, S.304A" in document.page_content
     assert fixture_chunks[0].text in document.page_content
     assert document.metadata["domain"] == "criminal"

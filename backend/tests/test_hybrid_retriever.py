@@ -265,3 +265,26 @@ def test_query_hybrid_index_rejects_invalid_k(built_indices):
 
     with pytest.raises(ValueError, match="k must be at least 1"):
         query_hybrid_index(faiss_index, bm25_index, "any query", k=0)
+
+
+def test_query_hybrid_index_explicit_section_ref_ranks_exact_match_first(built_indices):
+    faiss_index, bm25_index = built_indices
+
+    results = query_hybrid_index(
+        faiss_index,
+        bm25_index,
+        "What is Section 304A of the Indian Penal Code?",
+        k=3,
+    )
+
+    assert results
+    assert results[0].section_number == "304A"
+    assert results[0].source_citation == "IPC 1860, S.304A"
+
+
+def test_extract_section_refs_from_natural_language_query():
+    from app.rag.hybrid_retriever import extract_section_refs
+
+    assert extract_section_refs("What is Section 304A of the Indian Penal Code?") == {"304A"}
+    assert extract_section_refs("see S.154 and Sec. 220") == {"154", "220"}
+    assert extract_section_refs("careless conduct, also see 154") == set()

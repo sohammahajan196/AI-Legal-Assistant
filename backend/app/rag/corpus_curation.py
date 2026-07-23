@@ -36,12 +36,12 @@ COW_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/15793?loc
 CPA_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/15256?locale=en"
 TPA_INDIA_CODE_HANDLE = "https://www.indiacode.nic.in/handle/123456789/2338?locale=en"
 
-# Matches corpus section headers like "Section 304A." (TASKS.md T05 / T11).
-SECTION_HEADER_RE = re.compile(r"^Section\s+(\d+[A-Z]?)\.\s", re.MULTILINE)
+# Matches corpus section headers like "Section 304A." / "Section 376AB." (T05 / T11).
+SECTION_HEADER_RE = re.compile(r"^Section\s+(\d+[A-Z]*)\.\s", re.MULTILINE)
 
 # IPC operative sections end their title with an em dash before the body text.
 _IPC_SECTION_RE = re.compile(
-    r"^(?:\d+\[)?(?:\[\s*)?(\d{1,3}[A-Z]?)\.\s+"
+    r"^(?:\d+\[)?(?:\[\s*)?(\d{1,3}[A-Z]*)\.\s+"
     r"(?!Subs\.|Ins\.|Rep\.|Added |The words|The proviso|Certain words|Now see|Illustrations?\b)"
     r"(.+?)(?:\.[\u2014\u2013\u2015]|\.--|\.-)",
     re.MULTILINE,
@@ -49,7 +49,7 @@ _IPC_SECTION_RE = re.compile(
 
 # CrPC operative sections begin a numbered subsection "(1)" immediately after the title.
 _CRPC_SECTION_RE = re.compile(
-    r"^\s*(\d{1,3}[A-Z]?)\.(?:\s*|\s+)"
+    r"^\s*(\d{1,3}[A-Z]*)\.(?:\s*|\s+)"
     r"(?!Subs\.|Ins\.|Rep\.|Added |The words|The proviso|Certain words|Now see)"
     r"([A-Z][^.\n(]{1,100}?)\.\s*"
     r"(\(\d+\)|[A-Z(])",
@@ -376,7 +376,7 @@ def _dedupe_section_blocks(text: str) -> str:
     Consolidated India Code PDFs sometimes repeat a section number when
     amendment history is inlined; the first occurrence is the operative text.
     """
-    parts = re.split(r"(?=^Section\s+\d+[A-Z]?\.\s)", text, flags=re.MULTILINE)
+    parts = re.split(r"(?=^Section\s+\d+[A-Z]*\.\s)", text, flags=re.MULTILINE)
     if len(parts) <= 1:
         return text
 
@@ -384,7 +384,7 @@ def _dedupe_section_blocks(text: str) -> str:
     seen: set[str] = set()
     kept = [preamble]
     for part in parts[1:]:
-        match = re.match(r"^Section\s+(\d+[A-Z]?)\.", part)
+        match = re.match(r"^Section\s+(\d+[A-Z]*)\.", part)
         if match is None:
             kept.append(part)
             continue
@@ -413,7 +413,7 @@ def _join_crpc_wrapped_titles(text: str) -> str:
 
     while idx < len(lines):
         line = lines[idx]
-        match = re.match(r"^\s*(\d{1,3}[A-Z]?)\.\s*(.+)$", line)
+        match = re.match(r"^\s*(\d{1,3}[A-Z]*)\.\s*(.+)$", line)
         if match and "." not in match.group(2):
             buffer = line.strip()
             idx += 1

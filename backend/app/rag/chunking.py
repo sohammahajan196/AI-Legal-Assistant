@@ -14,7 +14,8 @@ from dataclasses import dataclass
 # Default max characters per chunk before splitting on numbered sub-clauses.
 DEFAULT_MAX_SECTION_CHARS = 2000
 
-SECTION_HEADER_RE = re.compile(r"^Section\s+(\d+[A-Z]?)\.\s+", re.MULTILINE)
+# Letter suffixes cover IPC-style inserts (304A, 376AB, 153AA, …).
+SECTION_HEADER_RE = re.compile(r"^Section\s+(\d+[A-Z]*)\.\s+", re.MULTILINE)
 
 CHAPTER_RE = re.compile(r"^CHAPTER\s+(.+?)\s*$", re.MULTILINE | re.IGNORECASE)
 

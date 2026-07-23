@@ -1,6 +1,6 @@
 # Project Folder Structure
 
-This document lays out the full repository layout implied by [PLAN.md](./PLAN.md), [PRD.md](./PRD.md), and [TASKS.md](./TASKS.md), with an explanation of every folder and major file. Nothing here has been created on disk yet — this is the reference structure to scaffold when implementation starts.
+This document lays out the full repository layout implied by [PLAN.md](./PLAN.md), [PRD.md](./PRD.md), and [TASKS.md](./TASKS.md), with an explanation of every folder and major file. The tree below is the implemented layout (hosted production additionally uses Vercel + Render + Upstash — see PLAN.md §13 / README).
 
 ```
 AI Legal Assistant/
@@ -115,12 +115,12 @@ AI Legal Assistant/
 
 - **`PLAN.md`** — the technical architecture: domain list, ingestion/chunking design, hybrid retrieval, RAG orchestration, schemas, confidence scoring, API/frontend/deployment design. The source of truth for *how* the system is built.
 - **`PRD.md`** — the product requirements: problem statement, goals, personas, user stories, functional/non-functional requirements, success metrics, risks. The source of truth for *what* and *why*.
-- **`TASKS.md`** — the 54-task, dependency-ordered implementation breakdown with acceptance criteria. The source of truth for *in what order* and *how to verify each step*.
-- **`STRUCTURE.md`** — this file; keeps the intended repo layout explicit and reviewable before any scaffolding happens.
-- **`README.md`** — the entry point for a new developer: setup instructions, how to run ingestion/index-build, how to run locally vs. via Docker, links to the three docs above (T54 in `TASKS.md`).
-- **`.env.example`** — documents every required environment variable (Gemini API key, bearer tokens, Redis URL, confidence thresholds) without real secret values — the only env file that gets committed.
+- **`TASKS.md`** — the dependency-ordered implementation breakdown with acceptance criteria (MVP T01–T54 plus post-deploy follow-ups T55–T57). The source of truth for *in what order* and *how to verify each step*.
+- **`STRUCTURE.md`** — this file; keeps the repo layout explicit and reviewable.
+- **`README.md`** — the entry point for a new developer: setup instructions, local vs Docker Compose, hosted production (Vercel/Render/Upstash), known operational limitations, ingestion/index-build, and evaluation (T54).
+- **`.env.example`** — documents every required environment variable (Gemini API key, bearer tokens, Redis URL, confidence thresholds, Docker offline-HF notes) without real secret values — the only env file that gets committed.
 - **`.gitignore`** — excludes `.env`, `data/faiss_index/`, `data/app.db`, `node_modules/`, Python virtualenvs/`__pycache__`, and other build artifacts from version control.
-- **`docker-compose.yml`** — wires the `backend`, `frontend`, and `redis` services together for one-command local/demo deployment (PLAN.md §13, T53).
+- **`docker-compose.yml`** — wires the `backend`, `frontend`, and `redis` services together for one-command local/demo deployment (PLAN.md §13, T53). Hosted demos swap Compose Redis for Upstash and run frontend/backend on Vercel/Render.
 
 ## `.cursor/rules/`
 
@@ -131,7 +131,7 @@ Persistent AI-agent guidance so implementation stays consistent with the archite
 
 ## `backend/` — FastAPI + LangChain RAG service
 
-- **`Dockerfile`** — builds the backend service image (T51).
+- **`Dockerfile`** — builds the backend service image (T51). At build time it downloads MiniLM embedding weights, runs ingest + FAISS/BM25 index build, then sets `HF_HUB_OFFLINE=1` so volume-less hosts (Render free tier) can serve without a persistent disk.
 - **`requirements.txt`** — pinned Python dependencies (fastapi, uvicorn, langchain, langchain-google-genai, langchain-huggingface, faiss-cpu, rank-bm25, pydantic, redis, slowapi, pytest, etc.).
 - **`pytest.ini`** — test discovery/config so `pytest` works from the `backend/` root (T04).
 
@@ -160,7 +160,7 @@ Exists as its own layer so HTTP concerns (status codes, request/response shapes)
 This is the heart of the system — every module maps directly to a pipeline stage in PLAN.md §3-§7:
 
 - **`chunking.py`** — section-boundary regex parser + metadata extractor; turns raw act text into citable chunks (T11).
-- **`embeddings.py`** — HuggingFace embedding model wrapper (`BAAI/bge-small-en-v1.5`) (T14).
+- **`embeddings.py`** — HuggingFace embedding model wrapper; default `sentence-transformers/all-MiniLM-L6-v2` (384-d) for Render free-tier RAM limits (T14).
 - **`vectorstore.py`** — FAISS index build/query, domain-filterable (T15).
 - **`bm25_index.py`** — BM25 keyword index build/query (T16).
 - **`hybrid_retriever.py`** — `EnsembleRetriever` combining FAISS + BM25 via Reciprocal Rank Fusion (T18).
@@ -201,7 +201,8 @@ Kept as CLI scripts rather than API endpoints deliberately (per PLAN.md §3) —
 
 - **`raw/<domain>/`** — one folder per legal domain, containing the curated bare-act text files (IPC/CrPC, CPC, HMA/SMA, ID Act/Code on Wages, CPA 2019, TPA 1882) sourced from India Code (T05-T10). Treated as immutable input.
 - **`processed/`** — one JSONL file per domain, the output of `ingest.py`; each line is one citable chunk with metadata.
-- **`faiss_index/`** — the persisted FAISS index, mounted as a Docker volume so it survives container restarts.
+- **`faiss_index/`** — the persisted FAISS index. Baked into the backend Docker image for Render; also mountable as a Compose named volume so local restarts keep a refreshed index.
+- **`bm25_index/`** — the persisted BM25 keyword index (same bake-at-build / local rebuild lifecycle as FAISS).
 - **`app.db`** — the SQLite database file backing `sessions`, `messages`, and `query_logs`.
 
 ### `backend/eval/` — offline quality measurement (not part of the live API)
@@ -223,8 +224,9 @@ One file per major concern (chunking, retrieval, structured output, confidence, 
 
 - **`layout.tsx`** — root layout; a natural place for the always-visible `DisclaimerBanner`.
 - **`page.tsx`** — the chat page itself: message list, input, `user_type` selector (T43, T46).
-- **`api/chat/route.ts`** — server-side proxy to the FastAPI backend; the only place the backend bearer token is read from env (T42). Exists specifically so the token never reaches client-side JavaScript.
+- **`api/chat/route.ts`** — server-side proxy to the FastAPI backend; the only place the backend bearer token is read from env (T42). Exists specifically so the token never reaches client-side JavaScript. Strips `Content-Encoding` / `Content-Length` / `Transfer-Encoding` when forwarding responses (Node `fetch` already decompresses gzip).
 - **`api/sessions/[id]/route.ts`** — proxies session history retrieval the same way.
+- **`api/domains/route.ts`**, **`api/health/route.ts`** — same proxy pattern for domain list and health.
 
 ### `frontend/components/`
 

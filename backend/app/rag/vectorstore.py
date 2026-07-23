@@ -76,11 +76,15 @@ def _searchable_page_content(chunk: LegalChunk) -> str:
 
     Processed chunk bodies often omit the ``Section N.`` header (kept in
     metadata only). BM25 needs those tokens in ``page_content`` so queries
-    like ``304A`` can match.
+    like ``304A`` can match. The full ``act_name`` is included as well —
+    citation abbreviations alone (``IPC``) do not match natural-language
+    queries that say ``Indian Penal Code``, which otherwise rank CrPC
+    passages that repeat that phrase above the real IPC section.
     """
     header_parts = [f"Section {chunk.section_number}."]
     if chunk.section_title:
         header_parts.append(chunk.section_title)
+    header_parts.append(chunk.act_name)
     header_parts.append(chunk.source_citation)
     header = " ".join(header_parts)
     body = chunk.text.strip()

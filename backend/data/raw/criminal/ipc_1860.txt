@@ -3649,7 +3649,7 @@ the course of such commission inflicts an injury which causes the death of the w
 woman to be in a persistent vegetative state, shall be punished with rigorous imprisonment for a term
 which shall not be less than twenty years, but which may extend to imprisonment for life, which shall
 mean imprisonment for the remainder of that person's natural life, or with death.
-2[376AB. Punishment for rape on woman under twelve years of age.—Whoever, commits rape on
+Section 376AB. Punishment for rape on woman under twelve years of age.—Whoever, commits rape on
 a woman under twelve years of age shall be punished with rigorous imprisonment for a term which shall
 not be less than twenty years, but which may extend to imprisonment for life, which shall mean
 imprisonment for the remainder of that person's natural life, and with fine or with death:
@@ -3695,7 +3695,7 @@ person's natural life, and with fine:
 Provided that such fine shall be just and reasonable to meet the medical expenses and rehabilitation of
 the victim:
 Provided further that any fine imposed under this section shall be paid to the victim.
-1[376DA. Punishment for gang rape on woman under sixteen years of age.—Where a woman
+Section 376DA. Punishment for gang rape on woman under sixteen years of age.—Where a woman
 under sixteen years of age is raped by one or more persons constituting a group or acting in furtherance of
 a common intention, each of those persons shall be deemed to have committed the offence of rape and
 shall be punished with imprisonment for life, which shall mean imprisonment for the remainder of that
@@ -3703,7 +3703,7 @@ person's natural life, and with fine:
 Provided that such fine shall be just and reasonable to meet the medical expenses and rehabilitation
 of the victim:
 Provided further that any fine imposed under this section shall be paid to the victim.
-376DB. Punishment for gang rape on woman under twelve years of age.—Where a woman under
+Section 376DB. Punishment for gang rape on woman under twelve years of age.—Where a woman under
 twelve years of age is raped by one or more persons constituting a group or acting in furtherance of a
 common intention, each of those persons shall be deemed to have committed the offence of rape and shall
 be punished with imprisonment for life, which shall mean imprisonment for the remainder of that person's

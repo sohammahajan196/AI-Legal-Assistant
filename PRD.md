@@ -116,6 +116,7 @@ Plus an `other` fallback classification for out-of-scope queries (triggers cauti
 ### 6.8 Deployment
 
 - The full system (backend, frontend, cache) must run via a single `docker-compose` command for local/demo deployment.
+- A hosted demo path is in scope: **Vercel** (Next.js UI + proxy routes), **Render** (backend Docker image with baked FAISS/BM25 + embedding weights), and **Upstash Redis** (cache/rate limits), within free-tier constraints (see PLAN.md §13 and README).
 
 ## 7. Non-Functional Requirements
 
@@ -148,12 +149,13 @@ Since this is an MVP/portfolio system rather than a monetized product, success i
 | LLM structured-output failures | Native JSON-schema-constrained decoding + bounded retry-with-repair loop before failing the request |
 | Over-confident wrong answers | Confidence computed server-side from retrieval/groundedness signals, not LLM self-report; low-confidence answers are overridden with a refusal template |
 | Narrow v1 corpus (1-2 acts/domain) may not cover many real questions | Refusal fallback for out-of-corpus questions is a first-class behavior, not a bug; corpus is designed to be incrementally expandable |
+| Free-tier hosting limits (Render 512MB RAM, cold starts, redeploy downtime; Gemini quota shifts) | Use MiniLM embeddings + single worker; bake index/weights into the Docker image; document operational quirks in README; keep `GEMINI_FALLBACK_MODEL` ready |
 
 ## 10. Assumptions & Dependencies
 
-- Google Gemini is the LLM provider (via `langchain-google-genai`), assumed available via API key.
+- Google Gemini is the LLM provider (via `langchain-google-genai`), assumed available via API key. Free-tier Gemini quotas are per-model (RPM/RPD) and can change; `GEMINI_MODEL` / `GEMINI_FALLBACK_MODEL` must be kept in sync with Google’s current rate-limit dashboard.
 - Legal source texts are sourced from public government portals (India Code) under fair-use/informational reproduction for a non-commercial demo; no proprietary/paid legal databases are used in v1.
-- Single-instance deployment (Docker Compose) is sufficient; no multi-region or high-availability requirement for MVP.
+- Single-instance deployment is sufficient for MVP — Docker Compose locally, or Vercel + Render + Upstash for the hosted demo. No multi-region or high-availability requirement.
 
 ## 11. Milestones (maps to PLAN.md implementation phases)
 

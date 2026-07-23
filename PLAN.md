@@ -35,8 +35,8 @@ flowchart LR
 
 - **Chunking**: custom regex-based parser (`backend/scripts/ingest.py`) that splits each act by `Section N.` boundaries (not fixed token windows), keeping chapter/section hierarchy. Each chunk = one section (further split on sub-clauses `(1)`, `(2)` if the section is very long).
 - **Metadata per chunk**: `domain`, `act_name`, `act_year`, `chapter`, `section_number`, `section_title`, `source_citation` (e.g. "IPC 1860, S.304A"), `raw_text`.
-- **Embeddings**: HuggingFace `BAAI/bge-small-en-v1.5` (via `langchain_huggingface.HuggingFaceEmbeddings`, CPU-friendly, strong general-purpose retrieval quality) — swappable via config.
-- **Vector store**: single FAISS index (`langchain_community.vectorstores.FAISS`) covering all domains, with `domain` stored in metadata so retrieval can apply a metadata `filter` when a domain is known/pre-classified. Index persisted to `backend/data/faiss_index/` and mounted as a Docker volume.
+- **Embeddings**: HuggingFace `sentence-transformers/all-MiniLM-L6-v2` (384-d, via `langchain_huggingface.HuggingFaceEmbeddings`) — default chosen to fit Render free-tier **512MB RAM** alongside torch + FAISS; larger BGE models OOM on that host. Still swappable via `EMBEDDING_MODEL` (rebuild the FAISS index after changing).
+- **Vector store**: single FAISS index (`langchain_community.vectorstores.FAISS`) covering all domains, with `domain` stored in metadata so retrieval can apply a metadata `filter` when a domain is known/pre-classified. Index lives under `backend/data/faiss_index/`. For local Compose it is also mounted as a named volume; for volume-less hosts (Render free tier) the index is **baked into the Docker image at build time** (see §13).
 - Ingestion is an **offline CLI script**, not an API endpoint (safer for MVP — avoids exposing index rebuild over HTTP).
 
 ## 4. Hybrid Retrieval Pipeline
@@ -60,7 +60,7 @@ flowchart TD
 
 - **Multi-turn context**: a "condense question" LLM step rewrites follow-ups into standalone queries using session history (session state kept in SQLite, keyed by `session_id`).
 - **Demographic-aware prompting**: `user_type` (`layperson` | `law_student` | `lawyer`) selects a prompt-template variant controlling explanation depth/tone; system prompt always includes the legal-disclaimer instruction.
-- **Generation**: `ChatGoogleGenerativeAI(model="gemini-2.5-flash"/"pro")` (config-selectable) via `.with_structured_output(schema, method="json_schema")` — Gemini's native JSON-schema-constrained decoding (confirmed current LangChain support), avoiding "return JSON as text" prompting.
+- **Generation**: `ChatGoogleGenerativeAI(model=settings.gemini_model)` (default `gemini-3.5-flash`, overridable via `GEMINI_MODEL` / optional `GEMINI_FALLBACK_MODEL`) via `.with_structured_output(schema, method="json_schema")` — Gemini's native JSON-schema-constrained decoding, avoiding "return JSON as text" prompting. Free-tier Gemini quotas are per-model and change over time; treat the default as a starting point and verify against Google’s rate-limit dashboard periodically.
 - **Retry-with-repair**: wrap the structured call in a bounded retry loop (max 2 retries): on Pydantic `ValidationError` (e.g. custom validators fail), re-invoke with the validation error message appended to the prompt, rather than failing the request outright.
 
 ## 6. Structured Output Contracts (Pydantic v2)
@@ -132,7 +132,32 @@ class LegalAnswerResponse(BaseModel):  # final API contract
 
 ## 13. Deployment
 
-- `docker-compose.yml` services: `backend` (FastAPI, FAISS volume-mounted), `frontend` (Next.js standalone), `redis` (cache/rate-limit). Ingestion is run once via `docker compose run backend python scripts/ingest.py` (or locally) before the backend starts serving.
+### Local / demo — Docker Compose
+
+- `docker-compose.yml` services: `backend` (FastAPI), `frontend` (Next.js standalone), `redis` (cache/rate-limit).
+- Named volumes (`faiss_index`, `sqlite_data`, `redis_data`) persist local state across `down`/`up`. An empty `faiss_index` volume is seeded from the baked image content on first start.
+- Optional refresh after corpus/`EMBEDDING_MODEL` changes: `docker compose run --rm backend python scripts/ingest.py` then `… build_index.py` (recreate the `faiss_index` volume if it still holds a prior embedding space).
+
+### Backend Docker image (bake-at-build)
+
+The `backend/Dockerfile` is designed for hosts **without persistent disk** (Render free tier):
+
+1. Pre-download embedding weights into `HF_HOME` / `SENTENCE_TRANSFORMERS_HOME`.
+2. Run `scripts/ingest.py` + `scripts/build_index.py` so FAISS **and** BM25 indices ship inside the image.
+3. Set `HF_HUB_OFFLINE=1` (plus `TRANSFORMERS_OFFLINE` / `HF_DATASETS_OFFLINE`) so runtime never downloads models — a wrong `EMBEDDING_MODEL` fails loudly instead of OOM-downloading a larger checkpoint.
+4. Pin `WEB_CONCURRENCY=1` / uvicorn `--workers 1` — embedding model + FAISS already dominate the 512MB RAM budget.
+
+Real secrets (`GOOGLE_API_KEY`, tokens) are supplied at runtime by the host; the image only carries a build-time placeholder so Settings validation passes during ingest.
+
+### Hosted production (free-tier)
+
+| Layer | Service | Notes |
+|---|---|---|
+| Frontend | **Vercel** | Next.js App Router + server-side proxy routes; holds `BACKEND_API_URL` / `BACKEND_API_TOKEN` |
+| Backend | **Render** (Docker) | FastAPI image above; 512MB RAM, ~15 min idle spin-down, ~5GB/month bandwidth, no zero-downtime deploys |
+| Redis | **Upstash** | `REDIS_URL` for cache + rate limits |
+
+Proxy routes must strip `Content-Encoding` / `Content-Length` / `Transfer-Encoding` when forwarding backend responses — Node `fetch` already decompresses gzip; forwarding those headers breaks browser decoding.
 
 ## 14. Proposed Repository Structure
 

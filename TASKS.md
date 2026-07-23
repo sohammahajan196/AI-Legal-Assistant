@@ -1,6 +1,6 @@
 # Implementation Task Breakdown
 
-Derived from [PRD.md](./PRD.md) and [PLAN.md](./PLAN.md). 54 tasks, ordered so that each task only depends on tasks with a lower ID. Each task is independently buildable/testable in isolation (using stubs/fixtures/mocks where a real upstream dependency doesn't exist yet).
+Derived from [PRD.md](./PRD.md) and [PLAN.md](./PLAN.md). 57 tasks (T01–T54 MVP build + T55–T57 post-deploy follow-ups), ordered so that each task only depends on tasks with a lower ID. Each task is independently buildable/testable in isolation (using stubs/fixtures/mocks where a real upstream dependency doesn't exist yet).
 
 ---
 
@@ -114,9 +114,10 @@ Derived from [PRD.md](./PRD.md) and [PLAN.md](./PLAN.md). 54 tasks, ordered so t
 
 ### T14 — HuggingFace embedding wrapper
 **Depends on:** T03
-**Description:** Build `backend/app/rag/embeddings.py` wrapping `HuggingFaceEmbeddings` (`BAAI/bge-small-en-v1.5`) behind a config-driven factory function.
+**Status:** Done
+**Description:** Build `backend/app/rag/embeddings.py` wrapping `HuggingFaceEmbeddings` behind a config-driven factory function. Default model is `sentence-transformers/all-MiniLM-L6-v2` (384-d) so the process fits Render free-tier 512MB RAM alongside torch + FAISS (larger BGE models OOM on that host).
 **Acceptance Criteria:**
-- `get_embedding_model()` returns a working embedder; embedding a sample sentence returns a vector of the expected dimension.
+- `get_embedding_model()` returns a working embedder; embedding a sample sentence returns a vector of the expected dimension (384 for the default MiniLM).
 - Model name is overridable via settings/env without code changes.
 - Unit test confirms two similar sentences have higher cosine similarity than two unrelated ones.
 
@@ -446,14 +447,16 @@ Derived from [PRD.md](./PRD.md) and [PLAN.md](./PLAN.md). 54 tasks, ordered so t
 
 ### T51 — Backend Dockerfile
 **Depends on:** T02, T17
-**Description:** Write `backend/Dockerfile` building the FastAPI service image, including a volume mount point for the FAISS index directory.
+**Status:** Done
+**Description:** Write `backend/Dockerfile` building the FastAPI service image. Bake embedding model weights plus FAISS/BM25 indices at **build time**, set `HF_HUB_OFFLINE=1` at runtime, keep a `VOLUME` mount point for local Compose, and pin a single uvicorn worker for free-tier RAM.
 **Acceptance Criteria:**
-- `docker build` succeeds and the resulting image starts the API and responds to `/health`.
+- `docker build` succeeds and the resulting image starts the API and responds to `/api/v1/health` without a runtime volume (indices present in the image).
 - Image size and layer caching are reasonable (dependency install layer cached separately from app code).
-- Container reads config from environment variables, not baked-in secrets.
+- Container reads secrets from environment variables, not baked-in production keys (`GOOGLE_API_KEY` build placeholder only).
 
 ### T52 — Frontend Dockerfile
 **Depends on:** T41
+**Status:** Done
 **Description:** Write `frontend/Dockerfile` building a Next.js standalone production image.
 **Acceptance Criteria:**
 - `docker build` succeeds and the resulting container serves the app on the configured port.
@@ -462,7 +465,8 @@ Derived from [PRD.md](./PRD.md) and [PLAN.md](./PLAN.md). 54 tasks, ordered so t
 
 ### T53 — docker-compose.yml (backend + frontend + redis + volumes)
 **Depends on:** T51, T52
-**Description:** Write root `docker-compose.yml` wiring the backend, frontend, and Redis services together with the FAISS index volume and shared `.env` configuration.
+**Status:** Done
+**Description:** Write root `docker-compose.yml` wiring the backend, frontend, and Redis services together with the FAISS index volume and shared `.env` configuration. (Hosted production uses the same images/env contract on Vercel + Render + Upstash — see README / PLAN.md §13.)
 **Acceptance Criteria:**
 - `docker compose up` brings up all 3 services and the frontend can successfully complete a chat round trip through the backend.
 - Redis data and the FAISS index persist across a `docker compose down && docker compose up` cycle (named volumes).
@@ -470,8 +474,40 @@ Derived from [PRD.md](./PRD.md) and [PLAN.md](./PLAN.md). 54 tasks, ordered so t
 
 ### T54 — README + setup docs
 **Depends on:** T17, T47, T53
-**Description:** Write the final root `README.md` covering: project overview, architecture summary/diagram reference, local dev setup (backend + frontend without Docker), Docker Compose usage, ingestion/index-build steps, and how to run the evaluation script.
+**Status:** Done
+**Description:** Write the final root `README.md` covering: project overview, architecture summary/diagram reference, local dev setup (backend + frontend without Docker), Docker Compose usage, hosted production (Vercel/Render/Upstash), known operational limitations, ingestion/index-build steps, and how to run the evaluation script.
 **Acceptance Criteria:**
 - A new developer following the README from a clean checkout can get the full system running end-to-end (ingest → build index → docker compose up → send a chat message) without needing to ask questions.
 - README links to `PRD.md` and `PLAN.md` for deeper context.
 - README documents all required environment variables and where to obtain the Gemini API key.
+- README documents free-tier hosting constraints and proxy header-stripping / cold-start quirks.
+
+---
+
+## Phase 13 — Post-deploy follow-ups
+
+Operational work that came out of the free-tier hosted deployment. Not required to call the MVP "feature-complete," but tracked so they are not forgotten.
+
+### T55 — Monitor Gemini free-tier quotas
+**Depends on:** T54
+**Status:** Open
+**Description:** Periodically verify `GEMINI_MODEL` / `GEMINI_FALLBACK_MODEL` against Google AI Studio’s rate-limit dashboard. Quotas are per-model (RPM/RPD), models get deprecated, and defaults in `.env.example` can go stale.
+**Acceptance Criteria:**
+- Documented check cadence (e.g. monthly or whenever chat starts returning 429/404).
+- Fallback model kept configured when the primary model is quota-constrained.
+
+### T56 — Startup validation that `GEMINI_MODEL` exists for the API key
+**Depends on:** T03, T22
+**Status:** Open
+**Description:** At backend boot (or first LLM call), detect 404/`NOT_FOUND` for the configured primary model and fail with a clear message pointing at `GEMINI_MODEL` / Google’s model list, rather than surfacing opaque per-request errors.
+**Acceptance Criteria:**
+- Misconfigured / deprecated model name produces an actionable startup or first-call error.
+- Covered by a unit/integration test with a mocked Gemini client.
+
+### T57 — Revisit Render tier if memory stays tight
+**Depends on:** T51
+**Status:** Open
+**Description:** If MiniLM + single-worker remains marginal (OOM under load, inability to enable reranker, long cold starts hurting demos), evaluate upgrading Render beyond free tier or moving the backend to a host with more RAM / persistent disk.
+**Acceptance Criteria:**
+- Decision recorded (stay on free tier with MiniLM vs upgrade) with measured RSS under a realistic chat load.
+- If upgrading, document the new memory budget and whether a larger embedding model (e.g. BGE) can be restored.

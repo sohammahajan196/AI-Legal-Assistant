@@ -22,6 +22,8 @@ under this Code and not otherwise for every act or omission contrary to the prov
 Section 304A. Causing death by negligence.—Whoever causes the death of any person by doing any rash
 or negligent act not amounting to culpable homicide, shall be punished with imprisonment of either
 description for a term which may extend to two years, or with fine, or with both.
+Section 376AB. Punishment for rape on woman under twelve years of age.—Whoever commits rape on a woman
+under twelve years of age shall be punished with death or imprisonment for life.
 """
 
 CRPC_SECTION_154_SAMPLE = """CHAPTER XII
@@ -64,16 +66,20 @@ def test_parse_ipc_sample_extracts_expected_sections():
         act_year=IPC_SOURCE.act_year,
     )
 
-    assert len(chunks) == 3
+    assert len(chunks) == 4
     numbers = [chunk.section_number for chunk in chunks]
-    assert numbers == ["1", "2", "304A"]
+    assert numbers == ["1", "2", "304A", "376AB"]
 
-    section_304a = chunks[-1]
+    section_304a = next(chunk for chunk in chunks if chunk.section_number == "304A")
     assert section_304a.section_title == "Causing death by negligence"
     assert section_304a.source_citation == "IPC 1860, S.304A"
     assert section_304a.chapter == "CHAPTER I — INTRODUCTION"
     assert "rash" in section_304a.text
     assert "negligent act" in section_304a.text
+
+    section_376ab = next(chunk for chunk in chunks if chunk.section_number == "376AB")
+    assert section_376ab.source_citation == "IPC 1860, S.376AB"
+    assert "twelve years" in section_376ab.text
 
     for chunk in chunks:
         _assert_chunk_metadata(chunk)

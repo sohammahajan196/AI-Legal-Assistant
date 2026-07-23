@@ -6,9 +6,10 @@ alwaysApply: false
 
 # Deployment Conventions
 
-- Three compose services: `backend`, `frontend`, `redis`. Don't add new services without updating `PLAN.md` §13.
-- The FAISS index directory (`backend/data/faiss_index/`) is a named volume — it must persist across `docker compose down`/`up` cycles, and is built via `scripts/build_index.py` before the backend serves traffic, not on container startup.
-- No secrets baked into images — all config (API keys, tokens, thresholds) comes from environment variables documented in `.env.example`.
+- Three compose services: `backend`, `frontend`, `redis`. Don't add new services without updating `PLAN.md` §13. Hosted production maps the same roles to Vercel (frontend), Render (backend Docker), and Upstash (Redis).
+- The backend image bakes FAISS/BM25 indices and embedding weights at **build time** (`HF_HUB_OFFLINE=1` at runtime) so volume-less hosts (Render free tier) can serve traffic. Local Compose may still mount a named `faiss_index` volume; recreate it after changing `EMBEDDING_MODEL`.
+- No production secrets baked into images — all config (API keys, tokens, thresholds) comes from environment variables documented in `.env.example`. A build-time `GOOGLE_API_KEY` placeholder is allowed only so ingest/index-build can construct Settings.
 - Frontend image must read the backend URL from a runtime env var, not a build-time constant.
 - Keep dependency-install layers separate from app-code layers in both Dockerfiles for build-cache efficiency.
 - Any new required environment variable must be added to `.env.example` in the same change that introduces it.
+- Next.js proxy routes must strip `Content-Encoding` / `Content-Length` / `Transfer-Encoding` when forwarding backend responses (Node `fetch` already decompresses gzip).

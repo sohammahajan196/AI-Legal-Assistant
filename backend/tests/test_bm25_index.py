@@ -95,6 +95,45 @@ def test_query_section_number_returns_matching_chunk(
     assert "304A" in results[0].text
 
 
+def test_natural_language_section_query_ranks_matching_ipc_chunk(
+    tmp_path: Path,
+    fixture_chunks: list[LegalChunk],
+):
+    """Act name must be searchable — abbreviation-only headers lose to CrPC.
+
+    Regression: \"What is Section 304A of the Indian Penal Code?\" used to
+    rank CrPC passages that repeat that phrase above IPC 304A itself.
+    """
+    persist_dir = tmp_path / "bm25_index"
+    # A CrPC chunk that name-drops the IPC, like many procedure sections do.
+    noisy_crpc = LegalChunk(
+        domain="criminal",
+        act_name="Code of Criminal Procedure",
+        act_year=1973,
+        chapter="CHAPTER XVII",
+        section_number="220",
+        section_title="Trial for more than one offence",
+        source_citation="CrPC 1973, S.220",
+        text=(
+            "If the acts alleged constitute offences falling under two or more "
+            "definitions of the Indian Penal Code, the accused may be charged with "
+            "and tried at one trial for each of such offences under that Code."
+        ),
+    )
+    build_bm25_index([*fixture_chunks, noisy_crpc], str(persist_dir))
+    index = load_bm25_index(str(persist_dir))
+
+    results = query_bm25_index(
+        index,
+        "What is Section 304A of the Indian Penal Code?",
+        k=3,
+    )
+
+    assert results
+    assert results[0].section_number == "304A"
+    assert results[0].source_citation == "IPC 1860, S.304A"
+
+
 def test_load_and_query_without_rebuilding(
     tmp_path: Path,
     fixture_chunks: list[LegalChunk],

@@ -15,19 +15,18 @@ This is **not** legal advice and does **not** draft binding legal documents.
 
 ## Architecture at a glance
 
-The system has three runtime services (backend, frontend, Redis) plus offline index build:
+Locally (and via Docker Compose) the system has three runtime services — backend, frontend, Redis — plus an offline index build. Production splits those across hosted free tiers:
 
 ```mermaid
 flowchart LR
-    User[Browser] --> NextUI["Next.js 15 Chat UI"]
-    NextUI --> ProxyRoute["Next.js API proxy"]
-    ProxyRoute --> FastAPI["FastAPI backend"]
-    FastAPI --> Redis["Redis cache / rate limits"]
-    FastAPI --> RAG["LCEL RAG chain"]
-    RAG --> FAISS["FAISS index"]
-    RAG --> BM25["BM25 index"]
+    User[Browser] --> Vercel["Vercel: Next.js UI + API proxy"]
+    Vercel --> Render["Render: FastAPI backend Docker"]
+    Render --> Upstash["Upstash Redis"]
+    Render --> RAG["LCEL RAG chain"]
+    RAG --> FAISS["FAISS index baked in image"]
+    RAG --> BM25["BM25 index baked in image"]
     RAG --> Gemini["Gemini LLM"]
-    FastAPI --> SQLite["SQLite sessions / logs"]
+    Render --> SQLite["SQLite sessions / logs"]
 ```
 
 Retrieval, RAG orchestration, API contracts, and deployment details are documented with additional diagrams in [PLAN.md](./PLAN.md) (Sections 2–5, 8, 13).
@@ -79,7 +78,7 @@ Compose overrides these at runtime where needed; see [`docker-compose.yml`](./do
 
 ### Optional tuning
 
-Embedding model, retrieval `top_k`, confidence thresholds, cache TTL, and rate-limit tiers are all configurable — see `.env.example`. Defaults match [PLAN.md](./PLAN.md).
+Embedding model, retrieval `top_k`, confidence thresholds, cache TTL, and rate-limit tiers are all configurable — see `.env.example`. Defaults match [PLAN.md](./PLAN.md). The production default embedding model is `sentence-transformers/all-MiniLM-L6-v2` (384-d) — chosen to stay under Render’s free-tier 512MB RAM limit (larger BGE models OOM alongside torch + FAISS).
 
 ### Gemini API key
 
@@ -88,6 +87,8 @@ Embedding model, retrieval `top_k`, confidence thresholds, cache TTL, and rate-l
 3. Click **Create API key** and copy the value into `GOOGLE_API_KEY` in your `.env`.
 
 The backend validates this key at startup (`app/core/config.py`) and refuses to boot if it is missing or blank.
+
+Free-tier Gemini quotas are **per-model** (daily and per-minute) and change over time — models get deprecated and rate limits shift. Periodically check Google’s rate-limit dashboard and keep `GEMINI_MODEL` / `GEMINI_FALLBACK_MODEL` pointed at models your key can actually call; do not assume the defaults stay available forever.
 
 ### Frontend-only env (local dev)
 
@@ -112,9 +113,11 @@ cp .env.example .env
 # Edit .env: set GOOGLE_API_KEY; keep BACKEND_API_TOKEN in sync with BACKEND_API_TOKENS
 ```
 
-### 2. Build the search indices (one-time)
+### 2. Build (index is baked into the backend image)
 
-Populates named Docker volumes (`faiss_index`, `sqlite_data`) with processed chunks and retrieval indices. The first run downloads the HuggingFace embedding model — allow several minutes.
+The backend `Dockerfile` downloads the embedding weights and runs `ingest.py` + `build_index.py` **at image build time**, then sets `HF_HUB_OFFLINE=1` so runtime never hits Hugging Face. That is required for hosts without persistent disk (e.g. Render free tier).
+
+For local Compose, an empty named volume mounted over `data/faiss_index` is populated from the image on first `up`. You only need the one-time CLI below if you want to refresh a **non-empty** volume after changing `EMBEDDING_MODEL` or corpus files:
 
 ```bash
 docker compose run --rm backend python scripts/ingest.py
@@ -240,7 +243,7 @@ Step 3 aborts without writing indices if validation fails. On success it writes:
 - `data/faiss_index/` — semantic FAISS index
 - `data/bm25_index/` — keyword BM25 index
 
-The first FAISS build downloads `EMBEDDING_MODEL` (default `BAAI/bge-small-en-v1.5`). Paths are configurable via `FAISS_INDEX_DIR` and `BM25_INDEX_DIR` in `.env`.
+The first FAISS build downloads `EMBEDDING_MODEL` (default `sentence-transformers/all-MiniLM-L6-v2`, 384-d). Paths are configurable via `FAISS_INDEX_DIR` and `BM25_INDEX_DIR` in `.env`.
 
 **Maintainers only:** to regenerate raw corpus files from upstream sources, run the `backend/scripts/curate_*.py` scripts for each domain and their matching `pytest tests/test_corpus_*.py` checks.
 
@@ -319,6 +322,35 @@ docker-compose.yml  Backend + frontend + Redis
 
 ---
 
+## Production deployment (hosted)
+
+The live demo is split across three free-tier services:
+
+| Layer | Host | Role |
+|---|---|---|
+| Frontend | **Vercel** | Next.js 15 UI + server-side API proxy routes (`/api/chat`, `/api/domains`, `/api/sessions/…`, `/api/health`) |
+| Backend | **Render** | FastAPI in Docker; FAISS/BM25 indices and MiniLM weights baked into the image |
+| Cache / rate limits | **Upstash Redis** | `REDIS_URL` points at the Upstash endpoint (TLS) |
+
+Set the same secrets on each host that local `.env` uses: `GOOGLE_API_KEY`, `BACKEND_API_TOKENS` on Render; `BACKEND_API_URL` (Render service URL) and `BACKEND_API_TOKEN` on Vercel; `REDIS_URL` on Render.
+
+### Free-tier constraints (Render)
+
+- **512MB RAM** — why the embedding model is MiniLM (384-d) and why `WEB_CONCURRENCY` / uvicorn workers stay at 1.
+- **No persistent disk** — indices and HuggingFace weights must be baked at Docker build time; runtime uses `HF_HUB_OFFLINE=1`.
+- **Cold starts** — after ~15 minutes idle the service spins down; the next request can take 30–60s.
+- **Bandwidth** — roughly 5GB/month on free tier; watch egress if demos get heavy traffic.
+
+Local Docker Compose remains the recommended path for development; see [PLAN.md §13](./PLAN.md).
+
+## Known limitations / operational notes
+
+- **Redeploy downtime** — Render free tier has no zero-downtime deploys; a backend redeploy typically means ~1–2 minutes of downtime.
+- **Cold starts** — after idle spin-down, expect 30–60s before `/api/v1/health` and chat respond.
+- **Proxy response headers** — Next.js proxy routes must **never** forward `Content-Encoding`, `Content-Length`, or `Transfer-Encoding` from the backend. Node’s `fetch` already decompresses gzip when reading the body; forwarding those headers causes `net::ERR_CONTENT_DECODING_FAILED` in the browser (intermittent on larger answers that trigger Render/CDN gzip). See `frontend/app/api/chat/route.ts`.
+- **Gemini quotas** — free-tier per-model RPM/RPD limits vary and change; if chat starts failing with 429/404, verify `GEMINI_MODEL` / `GEMINI_FALLBACK_MODEL` against Google’s current dashboard rather than assuming the documented default still works.
+- **Compose volumes vs baked index** — a non-empty local `faiss_index` named volume keeps the old index and will not pick up a newly baked image layer. Recreate the volume after changing `EMBEDDING_MODEL` or rebuilding the corpus.
+
 ## Troubleshooting
 
 | Symptom | Likely fix |
@@ -326,7 +358,10 @@ docker-compose.yml  Backend + frontend + Redis
 | Backend won't start: `GOOGLE_API_KEY must not be blank` | Set a real key in the repo-root `.env` (or `backend/.env`) |
 | Chat returns 503 "Backend proxy is not configured" | Set `BACKEND_API_URL` and `BACKEND_API_TOKEN` in `frontend/.env.local` |
 | Chat returns 401 from backend | `BACKEND_API_TOKEN` must match a token in `BACKEND_API_TOKENS` |
-| Refusal on every question | Indices not built — run `scripts/build_index.py` or the compose one-liners above |
+| Refusal on every question | Indices not built — run `scripts/build_index.py` or rebuild the backend image |
 | Rate-limit / cache errors locally | Start Redis (`docker compose up redis -d`) and set `REDIS_URL=redis://localhost:6379/0` |
 | `docker` not found in WSL | Start Docker Desktop on Windows; enable WSL integration in Docker Desktop settings |
-| First index build is slow | Normal — HuggingFace embedding model download on first `build_index.py` run |
+| First index build is slow | Normal — HuggingFace embedding model download on first `build_index.py` / Docker build |
+| `ERR_CONTENT_DECODING_FAILED` in the browser | Proxy is forwarding gzip headers — strip `Content-Encoding` / `Content-Length` (see Known limitations) |
+| Chat fails with Gemini 429 / model 404 | Check Google AI Studio rate limits; update `GEMINI_MODEL` or set `GEMINI_FALLBACK_MODEL` |
+| OOM / crash on Render free tier | Keep MiniLM + single worker; do not enable the reranker on 512MB |

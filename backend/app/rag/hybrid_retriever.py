@@ -8,6 +8,7 @@ See PLAN.md Section 4 and TASKS.md T18.
 from __future__ import annotations
 
 import math
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 
@@ -29,7 +30,20 @@ HYBRID_ID_KEY = "source_citation"
 # below stays numerically consistent with the fusion it performs internally.
 DEFAULT_RRF_CONSTANT = 60
 
+# Explicit "Section 304A" (etc.) lookups: RRF alone can let a dual-leg near-miss
+# outrank a BM25-only exact section hit. This boost is >> max RRF (~0.016).
+SECTION_REF_RRF_BOOST = 1.0
+
+_SECTION_REF_RE = re.compile(
+    r"(?i)\b(?:sections?|sec\.?|s\.)\s*(\d+[A-Za-z]*)\b",
+)
+
 _QueryHit = FaissQueryResult | Bm25QueryResult
+
+
+def extract_section_refs(query: str) -> set[str]:
+    """Return uppercased section ids referenced as ``Section 304A`` / ``S.154``."""
+    return {match.group(1).upper() for match in _SECTION_REF_RE.finditer(query)}
 
 
 @dataclass(frozen=True)
@@ -112,6 +126,9 @@ def query_hybrid_index(
 
     Domain filtering is delegated to each leg's own query function (both
     already support it), then results are fused and normalized to [0, 1].
+    Explicit section references in the query (e.g. ``Section 304A``) receive
+    an RRF score boost so exact statutory lookups are not buried by dual-leg
+    near-misses.
     """
     if k < 1:
         raise ValueError("k must be at least 1")
@@ -137,6 +154,16 @@ def query_hybrid_index(
             resolved_weights,
         )
 
+        section_refs = extract_section_refs(query)
+        if section_refs:
+            _boost_exact_section_matches(
+                bm25_index,
+                section_refs,
+                hits_by_citation,
+                rrf_scores,
+                domain=domain,
+            )
+
         fused_ids = sorted(hits_by_citation, key=lambda cid: rrf_scores[cid], reverse=True)
         normalized_scores = normalize_scores([rrf_scores[cid] for cid in fused_ids])
 
@@ -159,3 +186,25 @@ def query_hybrid_index(
     except Exception as exc:
         logger.exception("Vector search failed: %s", type(exc).__name__)
         raise
+
+
+def _boost_exact_section_matches(
+    bm25_index,
+    section_refs: set[str],
+    hits_by_citation: dict[str, _QueryHit],
+    rrf_scores: dict[str, float],
+    *,
+    domain: str | None,
+) -> None:
+    """Promote chunks whose ``section_number`` matches an explicit query ref."""
+    for doc in getattr(bm25_index, "docs", []):
+        metadata = doc.metadata
+        section_number = str(metadata.get("section_number", "")).upper()
+        if section_number not in section_refs:
+            continue
+        if domain is not None and str(metadata.get("domain")) != domain:
+            continue
+        citation_id = str(metadata["source_citation"])
+        if citation_id not in hits_by_citation:
+            hits_by_citation[citation_id] = Bm25QueryResult.from_document(doc, rank=0)
+        rrf_scores[citation_id] = rrf_scores.get(citation_id, 0.0) + SECTION_REF_RRF_BOOST
