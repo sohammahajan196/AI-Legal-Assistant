@@ -125,4 +125,33 @@ describe("POST /api/chat proxy", () => {
     expect(responseText).not.toContain(SERVER_TOKEN);
     expect(JSON.parse(responseText)).toEqual(SAMPLE_BACKEND_BODY);
   });
+
+  it("strips Content-Encoding/Length so decompressed body matches headers", async () => {
+    const backendJson = JSON.stringify(SAMPLE_BACKEND_BODY);
+
+    fetchMock.mockResolvedValueOnce(
+      new Response(backendJson, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json",
+          // Simulates Render/CDN gzip that Node fetch already decompressed.
+          "Content-Encoding": "gzip",
+          "Content-Length": "42",
+          "Transfer-Encoding": "chunked",
+        },
+      })
+    );
+
+    const response = await POST(
+      createChatRequest({ query: "What is theft?", user_type: "layperson" })
+    );
+    const responseText = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-encoding")).toBeNull();
+    expect(response.headers.get("content-length")).toBeNull();
+    expect(response.headers.get("transfer-encoding")).toBeNull();
+    expect(response.headers.get("content-type")).toBe("application/json");
+    expect(JSON.parse(responseText)).toEqual(SAMPLE_BACKEND_BODY);
+  });
 });

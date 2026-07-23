@@ -6,11 +6,23 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 
-const SENSITIVE_RESPONSE_HEADERS = new Set([
+/**
+ * Headers that must not be forwarded to the browser.
+ *
+ * Content-Encoding / Content-Length / Transfer-Encoding are stripped because
+ * `fetch` already decompresses the body when we call `.text()` — forwarding
+ * the backend's gzip headers would make the browser try to gunzip plain JSON
+ * (net::ERR_CONTENT_DECODING_FAILED). Larger chat answers are more likely to
+ * trigger Render/CDN gzip, which is why failures looked intermittent.
+ */
+const STRIPPED_RESPONSE_HEADERS = new Set([
   "authorization",
   "set-cookie",
   "www-authenticate",
   "proxy-authenticate",
+  "content-encoding",
+  "content-length",
+  "transfer-encoding",
 ]);
 
 function backendChatUrl(): string | null {
@@ -29,7 +41,7 @@ function backendBearerToken(): string | null {
 function sanitizeResponseHeaders(headers: Headers): Headers {
   const sanitized = new Headers();
   headers.forEach((value, key) => {
-    if (!SENSITIVE_RESPONSE_HEADERS.has(key.toLowerCase())) {
+    if (!STRIPPED_RESPONSE_HEADERS.has(key.toLowerCase())) {
       sanitized.set(key, value);
     }
   });

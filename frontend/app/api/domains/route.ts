@@ -4,11 +4,19 @@
  */
 import { NextResponse } from "next/server";
 
-const SENSITIVE_RESPONSE_HEADERS = new Set([
+/**
+ * Headers that must not be forwarded to the browser.
+ * Content-Encoding/Length/Transfer-Encoding are stripped because `fetch`
+ * decompresses the body when we call `.text()` — see chat/route.ts.
+ */
+const STRIPPED_RESPONSE_HEADERS = new Set([
   "authorization",
   "set-cookie",
   "www-authenticate",
   "proxy-authenticate",
+  "content-encoding",
+  "content-length",
+  "transfer-encoding",
 ]);
 
 function backendDomainsUrl(): string | null {
@@ -27,7 +35,7 @@ function backendBearerToken(): string | null {
 function sanitizeResponseHeaders(headers: Headers): Headers {
   const sanitized = new Headers();
   headers.forEach((value, key) => {
-    if (!SENSITIVE_RESPONSE_HEADERS.has(key.toLowerCase())) {
+    if (!STRIPPED_RESPONSE_HEADERS.has(key.toLowerCase())) {
       sanitized.set(key, value);
     }
   });
